@@ -9,8 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "backend": "python backend/main.py",
-    "install-backend": "python -m pip install -r backend/requirements.txt && python -m playwright install chromium",
-    "start": "cd backend && python main.py"
+    "install-backend": "python -m pip install -r backend/requirements.txt && python -m playwright install chromium"
   },
   "dependencies": {
     "lucide-react": "^0.263.1",
