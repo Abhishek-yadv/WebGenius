@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: webscraper-backend
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: "cd backend && pip install -r requirements.txt && python -m playwright install chromium"
+    startCommand: "cd backend && python main.py"
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: PYTHONPATH
+        value: /opt/render/project/src/backend
+    healthCheckPath: /api/health

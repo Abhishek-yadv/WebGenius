@@ -97,7 +97,6 @@ async def extract_links_from_section(page, section_url, section_prefix):
 
     return links
 
-# ✅ Extract main content from a page
 # ✅ Extract main content from a page with sidebar removal
 async def extract_content_from_page(page, url):
     try:
@@ -238,7 +237,7 @@ async def scrape_section(base_url, section):
 # API Routes
 @app.get("/")
 async def root():
-    return FileResponse("dist/index.html")
+    return {"message": "WebScraper Pro API", "status": "online", "docs": "/docs"}
 
 @app.post("/api/scrape", response_model=ScrapeResponse)
 async def scrape_endpoint(scrape_req: ScrapeRequest):
@@ -303,8 +302,6 @@ async def get_scraped_data(filename: str):
             detail=f"Error reading file: {str(e)}"
         )
 
-app.mount("/static", StaticFiles(directory="dist"), name="static")
-
 @app.get("/api/health")
 async def health_check():
     return {"status": "healthy", "timestamp": datetime.datetime.now().isoformat()}
@@ -312,10 +309,11 @@ async def health_check():
 # Dev server entry
 if __name__ == "__main__":
     import uvicorn
-    print("\n===== Documentation Scraper API =====")
-    print("Starting server...")
-    print("Access the API via:")
-    print("• http://localhost:5000/")
-    print("• API documentation: http://localhost:5000/docs")
+    port = int(os.environ.get("PORT", 5000))
+    print(f"\n===== Documentation Scraper API =====")
+    print(f"Starting server on port {port}...")
+    print(f"Access the API via:")
+    print(f"• http://localhost:{port}/")
+    print(f"• API documentation: http://localhost:{port}/docs")
     print("=======================================\n")
-    uvicorn.run(app, host="0.0.0.0", port=5000)
+    uvicorn.run(app, host="0.0.0.0", port=port)

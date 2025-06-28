@@ -66,25 +66,35 @@ The frontend is already configured for Netlify deployment:
 2. Deploy the `dist/` folder to Netlify
 3. The frontend will automatically detect if it's in production mode
 
-##### Backend (Railway)
-The backend is configured for Railway deployment:
+##### Backend (Render)
+The backend is configured for Render deployment:
 
-1. **Sign up at [Railway](https://railway.app)**
-2. **Connect your GitHub repository**
-3. **Railway will automatically detect the configuration files:**
-   - `railway.toml` - Railway configuration
-   - `Procfile` - Process configuration
-   - `runtime.txt` - Python version
-4. **Set environment variables in Railway dashboard if needed**
+1. **Sign up at [Render](https://render.com)**
+2. **Create a new Web Service**
+3. **Connect your GitHub repository**
+4. **Render will automatically detect the configuration:**
+   - Uses `render.yaml` for configuration
+   - Installs Python dependencies from `backend/requirements.txt`
+   - Installs Playwright Chromium browser
+   - Starts the server with `python main.py`
 5. **Deploy and get your backend URL**
 
+##### Alternative: Manual Render Setup
+If automatic detection doesn't work:
+
+1. **Build Command:** `cd backend && pip install -r requirements.txt && python -m playwright install chromium`
+2. **Start Command:** `cd backend && python main.py`
+3. **Environment Variables:**
+   - `PORT`: 10000 (Render default)
+   - `PYTHONPATH`: /opt/render/project/src/backend
+
 ##### Update Frontend Configuration
-After deploying your backend to Railway:
+After deploying your backend to Render:
 
 1. **Copy `.env.example` to `.env`**
-2. **Update the Railway backend URL:**
+2. **Update the Render backend URL:**
    ```env
-   VITE_RAILWAY_BACKEND_URL=https://your-actual-railway-app.railway.app
+   VITE_RENDER_BACKEND_URL=https://your-actual-app.onrender.com
    ```
 3. **Redeploy your frontend to Netlify**
 
@@ -147,7 +157,7 @@ npm run backend    # Start backend with auto-reload
 ## Deployment Architecture
 
 ```
-Frontend (Netlify) ←→ Backend (Railway)
+Frontend (Netlify) ←→ Backend (Render)
      ↓                      ↓
 Static Files          Python + FastAPI
 React SPA            Playwright Scraper
@@ -160,7 +170,20 @@ React SPA            Playwright Scraper
 - Automatically uses `localhost:5000` for API calls
 
 ### Production
-- `VITE_RAILWAY_BACKEND_URL` - Your Railway backend URL
+- `VITE_RENDER_BACKEND_URL` - Your Render backend URL
+
+## Troubleshooting
+
+### Render Deployment Issues
+1. **Build fails**: Check that `render.yaml` is in the root directory
+2. **Playwright issues**: Ensure Chromium is installed in build command
+3. **Port issues**: Render uses port 10000 by default, our app adapts automatically
+4. **Memory issues**: Consider upgrading to a paid Render plan for better performance
+
+### Frontend Connection Issues
+1. **CORS errors**: Backend is configured to allow all origins
+2. **API offline**: Check that your Render service is running
+3. **Wrong URL**: Verify `VITE_RENDER_BACKEND_URL` in your `.env` file
 
 ## Contributing
 
