@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Globe, Search, Download, History, Settings, FileText, Link, Image, Database, Trash2, Play, CheckCircle, AlertCircle, Copy, ExternalLink, Server } from 'lucide-react';
+import { API_BASE_URL } from './config';
 
 interface ScrapeResult {
   id: string;
@@ -25,8 +26,6 @@ interface ScrapeOptions {
   followRedirects: boolean;
   timeout: number;
 }
-
-const API_BASE_URL = 'http://localhost:5000';
 
 function App() {
   const [url, setUrl] = useState('');
@@ -126,8 +125,8 @@ function App() {
 
       const data = await response.json();
       
-      if (data.status === 'success' && data.result) {
-        return data.result.data;
+      if (data.status === 'success' && data.results && data.results.length > 0) {
+        return data.results[0].data;
       } else {
         throw new Error(data.message || 'Unknown error occurred');
       }
@@ -393,7 +392,10 @@ function App() {
                 Backend API is offline
               </p>
               <p className={`text-sm ${theme === 'dark' ? 'text-red-300' : 'text-red-500'}`}>
-                Please start the backend server by running: <code className="bg-black/20 px-2 py-1 rounded">npm run backend</code>
+                {import.meta.env.DEV 
+                  ? 'Please start the backend server by running: npm run backend'
+                  : 'Backend service is currently unavailable. Please try again later.'
+                }
               </p>
             </div>
           </div>

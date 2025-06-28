@@ -9,15 +9,15 @@ A modern, full-stack web scraping application with a beautiful React frontend an
 - 📱 Fully responsive interface
 - 🔄 Real-time scraping progress tracking
 - 📊 Comprehensive results display with statistics
-- 💾 Export functionality (JSON, CSV)
+- 💾 Export functionality (JSON, CSV, MD, PDF)
 - 📝 Persistent scraping history
 - ⚙️ Advanced scraping options and settings
 - 🌐 API health monitoring
 
 ### Backend (FastAPI + Python)
-- 🚀 High-performance async web scraping
+- 🚀 High-performance async web scraping with Playwright
 - 🔧 Configurable extraction options
-- 📦 Batch URL processing
+- 📦 Documentation-focused scraping
 - 💾 Automatic result storage
 - 🛡️ Error handling and validation
 - 📚 Auto-generated API documentation
@@ -38,17 +38,18 @@ A modern, full-stack web scraping application with a beautiful React frontend an
 
 2. **Install backend dependencies:**
    ```bash
-   python -m pip install -r backend/requirements.txt
+   npm run install-backend
    ```
 
 ### Running the Application
 
+#### Development Mode
+
 1. **Start the backend server:**
    ```bash
    npm run backend
-   # or directly: python backend/main.py
    ```
-   The API will be available at `http://localhost:8000`
+   The API will be available at `http://localhost:5000`
 
 2. **Start the frontend development server:**
    ```bash
@@ -56,28 +57,59 @@ A modern, full-stack web scraping application with a beautiful React frontend an
    ```
    The web interface will be available at `http://localhost:5173`
 
+#### Production Deployment
+
+##### Frontend (Netlify)
+The frontend is already configured for Netlify deployment:
+
+1. Build the project: `npm run build`
+2. Deploy the `dist/` folder to Netlify
+3. The frontend will automatically detect if it's in production mode
+
+##### Backend (Railway)
+The backend is configured for Railway deployment:
+
+1. **Sign up at [Railway](https://railway.app)**
+2. **Connect your GitHub repository**
+3. **Railway will automatically detect the configuration files:**
+   - `railway.toml` - Railway configuration
+   - `Procfile` - Process configuration
+   - `runtime.txt` - Python version
+4. **Set environment variables in Railway dashboard if needed**
+5. **Deploy and get your backend URL**
+
+##### Update Frontend Configuration
+After deploying your backend to Railway:
+
+1. **Copy `.env.example` to `.env`**
+2. **Update the Railway backend URL:**
+   ```env
+   VITE_RAILWAY_BACKEND_URL=https://your-actual-railway-app.railway.app
+   ```
+3. **Redeploy your frontend to Netlify**
+
 ## API Documentation
 
-Once the backend is running, visit `http://localhost:8000/docs` for interactive API documentation.
+Once the backend is running, visit `http://localhost:5000/docs` for interactive API documentation.
 
 ### Key Endpoints
 
-- `POST /api/scrape` - Scrape a single URL
-- `POST /api/batch-scrape` - Scrape multiple URLs
-- `GET /api/scraped-data` - List all scraped data files
-- `GET /api/scraped-data/{filename}` - Get specific scraped data
+- `POST /api/scrape` - Scrape a documentation section
+- `GET /api/list-scraped-data` - List all scraped data files
+- `GET /api/get-scraped-data/{filename}` - Get specific scraped data
 - `GET /api/health` - Health check endpoint
 
-## Scraping Options
+## Scraping Features
 
-The scraper supports various extraction options:
+The scraper is specifically designed for documentation websites and supports:
 
-- **Extract Text**: Page title, description, and main content
-- **Extract Links**: All hyperlinks found on the page
-- **Extract Images**: Image URLs and sources
-- **Extract Metadata**: Meta tags and page metadata
-- **Follow Redirects**: Handle URL redirections
-- **Timeout**: Configurable request timeout
+- **Documentation Section Scraping**: Automatically discovers and scrapes all pages in a documentation section
+- **Content Extraction**: Page title, description, and main content with sidebar removal
+- **Link Discovery**: Finds all related documentation pages
+- **Image Extraction**: Captures image URLs and sources
+- **Metadata Collection**: Extracts meta tags and page metadata
+- **DOM-Ordered Results**: Maintains the natural order of pages as they appear
+- **Concurrent Processing**: Efficient batch processing with rate limiting
 
 ## Data Storage
 
@@ -93,8 +125,9 @@ Scraped data is automatically saved to the `scraped_data/` directory in JSON for
 
 ### Backend Stack
 - **FastAPI** for the web framework
+- **Playwright** for web scraping and browser automation
+- **BeautifulSoup4** for HTML parsing
 - **Pydantic** for data validation
-- **Python standard library** for web scraping (urllib, html.parser)
 - **Uvicorn** for the ASGI server
 
 ## Development
@@ -108,25 +141,26 @@ npm run lint       # Run ESLint
 
 ### Backend Development
 ```bash
-python backend/main.py  # Start with auto-reload
+npm run backend    # Start backend with auto-reload
 ```
 
-## Production Deployment
+## Deployment Architecture
 
-### Frontend
-```bash
-npm run build
-# Deploy the dist/ folder to your static hosting service
+```
+Frontend (Netlify) ←→ Backend (Railway)
+     ↓                      ↓
+Static Files          Python + FastAPI
+React SPA            Playwright Scraper
+                     Data Storage
 ```
 
-### Backend
-```bash
-# Install production dependencies
-python -m pip install -r backend/requirements.txt
+## Environment Variables
 
-# Run with production settings
-uvicorn backend.main:app --host 0.0.0.0 --port 8000
-```
+### Development
+- Automatically uses `localhost:5000` for API calls
+
+### Production
+- `VITE_RAILWAY_BACKEND_URL` - Your Railway backend URL
 
 ## Contributing
 
