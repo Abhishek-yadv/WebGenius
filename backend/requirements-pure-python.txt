@@ -1,0 +1,8 @@
+fastapi==0.68.0
+uvicorn==0.15.0
+python-multipart==0.0.5
+playwright==1.25.0
+beautifulsoup4==4.10.0
+aiofiles==0.7.0
+# These are ANCIENT versions from 2021 that have ZERO compilation requirements
+# They predate all Rust/C++ dependencies completely
