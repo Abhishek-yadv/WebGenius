@@ -2,7 +2,7 @@
 const isDevelopment = import.meta.env.DEV;
 const RENDER_BACKEND_URL = import.meta.env.VITE_RENDER_BACKEND_URL;
 
-// Update this URL once you deploy your backend to Render
+// API Base URL - matches your working HTML interface
 export const API_BASE_URL = isDevelopment 
   ? 'http://localhost:5000' 
   : RENDER_BACKEND_URL || 'https://your-backend-service.onrender.com';

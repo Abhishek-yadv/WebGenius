@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Globe, Search, Download, History, Settings, FileText, Link, Image, Database, Trash2, Play, CheckCircle, AlertCircle, Copy, ExternalLink, Server } from 'lucide-react';
+import { Globe, Search, Download, History, Settings, FileText, Link, Image, Database, Trash2, Play, CheckCircle, AlertCircle, Copy, ExternalLink, Server, RefreshCw } from 'lucide-react';
 import { API_BASE_URL } from './config';
 
 interface ScrapeResult {
@@ -18,28 +18,19 @@ interface ScrapeResult {
   error?: string;
 }
 
-interface ScrapeOptions {
-  extractText: boolean;
-  extractLinks: boolean;
-  extractImages: boolean;
-  extractMetadata: boolean;
-  followRedirects: boolean;
-  timeout: number;
+interface ScrapedFile {
+  filename: string;
+  content: Record<string, string>;
 }
 
 function App() {
-  const [url, setUrl] = useState('');
-  const [urls, setUrls] = useState<string[]>([]);
-  const [options, setOptions] = useState<ScrapeOptions>({
-    extractText: true,
-    extractLinks: true,
-    extractImages: false,
-    extractMetadata: true,
-    followRedirects: true,
-    timeout: 30000
-  });
-  const [results, setResults] = useState<ScrapeResult[]>([]);
-  const [isScrapingActive, setIsScrapingActive] = useState(false);
+  const [baseUrl, setBaseUrl] = useState('');
+  const [topic, setTopic] = useState('');
+  const [status, setStatus] = useState('Scraping status will appear here.');
+  const [statusType, setStatusType] = useState<'normal' | 'error' | 'success'>('normal');
+  const [scrapedFiles, setScrapedFiles] = useState<string[]>([]);
+  const [selectedFile, setSelectedFile] = useState<ScrapedFile | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'scraper' | 'history' | 'settings'>('scraper');
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
   const [apiStatus, setApiStatus] = useState<'checking' | 'online' | 'offline'>('checking');
@@ -47,34 +38,18 @@ function App() {
   // Check API health on mount
   useEffect(() => {
     checkApiHealth();
-    const interval = setInterval(checkApiHealth, 30000); // Check every 30 seconds
+    const interval = setInterval(checkApiHealth, 30000);
     return () => clearInterval(interval);
   }, []);
 
-  // Load saved data on mount
+  // Load saved theme
   useEffect(() => {
-    const savedResults = localStorage.getItem('scrapeResults');
-    if (savedResults) {
-      try {
-        const parsed = JSON.parse(savedResults);
-        setResults(parsed.map((r: any) => ({
-          ...r,
-          timestamp: new Date(r.timestamp)
-        })));
-      } catch (e) {
-        console.error('Error loading saved results:', e);
-      }
-    }
     const savedTheme = localStorage.getItem('theme') as 'light' | 'dark';
     if (savedTheme) {
       setTheme(savedTheme);
     }
+    listScrapedFiles();
   }, []);
-
-  // Save results to localStorage
-  useEffect(() => {
-    localStorage.setItem('scrapeResults', JSON.stringify(results));
-  }, [results]);
 
   // Theme toggle
   useEffect(() => {
@@ -95,229 +70,114 @@ function App() {
     }
   };
 
-  const addUrl = () => {
-    if (url.trim() && !urls.includes(url.trim())) {
-      setUrls([...urls, url.trim()]);
-      setUrl('');
-    }
-  };
-
-  const removeUrl = (index: number) => {
-    setUrls(urls.filter((_, i) => i !== index));
-  };
-
-  const scrapeWebsite = async (targetUrl: string): Promise<ScrapeResult['data']> => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/scrape`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          url: targetUrl,
-          options: options
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      
-      if (data.status === 'success' && data.results && data.results.length > 0) {
-        return data.results[0].data;
-      } else {
-        throw new Error(data.message || 'Unknown error occurred');
-      }
-    } catch (error) {
-      console.error('Scraping error:', error);
-      throw error;
-    }
-  };
-
-  const startScraping = async () => {
-    if (urls.length === 0 || apiStatus !== 'online') return;
-    
-    setIsScrapingActive(true);
-    
-    for (const targetUrl of urls) {
-      const result: ScrapeResult = {
-        id: Math.random().toString(36).substr(2, 9),
-        url: targetUrl,
-        timestamp: new Date(),
-        status: 'scraping',
-        data: {}
-      };
-      
-      setResults(prev => [result, ...prev]);
-      
-      try {
-        const scrapedData = await scrapeWebsite(targetUrl);
-        setResults(prev => 
-          prev.map(r => 
-            r.id === result.id 
-              ? { ...r, status: 'completed', data: scrapedData }
-              : r
-          )
-        );
-      } catch (error) {
-        setResults(prev => 
-          prev.map(r => 
-            r.id === result.id 
-              ? { ...r, status: 'error', error: error instanceof Error ? error.message : 'Failed to scrape website' }
-              : r
-          )
-        );
-      }
-    }
-    
-    setIsScrapingActive(false);
-    setUrls([]);
-  };
-
-  const exportResults = (format: 'json' | 'csv' | 'md' | 'pdf') => {
-    console.log('All results before filtering:', results); // Add this line
-    const completedResults = results.filter(r => r.status === 'completed');
-    console.log(`Exporting ${format} results. Completed results count: ${completedResults.length}`);
-    console.log('Completed Results (after filter):', completedResults); // Modify this line
-    if (completedResults.length === 0) {
-      alert('No completed scrape results to export. Please scrape some URLs first.');
+  const scrapeUrl = async () => {
+    if (!baseUrl.trim() || !topic.trim()) {
+      setStatus('Please enter both a website URL and a topic.');
+      setStatusType('error');
       return;
     }
 
-    let data: string = '';
-    let filename: string = '';
-    let mimeType: string = '';
-
-    if (format === 'json') {
-      data = JSON.stringify(completedResults, null, 2);
-      filename = 'scrape-results.json';
-      mimeType = 'application/json';
-    } else if (format === 'csv') {
-      const headers = ['URL', 'Title', 'Description', 'Links Count', 'Images Count', 'Timestamp'];
-      const rows = completedResults.map(result => [
-        result.url,
-        result.data.title || '',
-        result.data.description || '',
-        result.data.links?.length || 0,
-        result.data.images?.length || 0,
-        result.timestamp.toISOString()
-      ]);
-      
-      data = [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
-      filename = 'scrape-results.csv';
-      mimeType = 'text/csv';
-    } else if (format === 'md') {
-      data = completedResults.map(result => {
-        let mdContent = `## ${result.data.title || 'Untitled Page'}\n\n`;
-        mdContent += `**URL:** [${result.url}](${result.url})\n\n`;
-        mdContent += `**Scraped On:** ${result.timestamp.toLocaleString()}\n\n`;
-        if (result.data.description) {
-          mdContent += `**Description:** ${result.data.description}\n\n`;
-        }
-        if (result.data.text) {
-          mdContent += `### Extracted Text\n\n${result.data.text}\n\n`;
-        }
-        if (result.data.links && result.data.links.length > 0) {
-          mdContent += `### Links (${result.data.links.length})\n\n`;
-          result.data.links.forEach(link => {
-            mdContent += `- [${link}](${link})\n`;
-          });
-          mdContent += '\n';
-        }
-        if (result.data.images && result.data.images.length > 0) {
-          mdContent += `### Images (${result.data.images.length})\n\n`;
-          result.data.images.forEach(image => {
-            mdContent += `- [${image}](${image})\n`;
-          });
-          mdContent += '\n';
-        }
-        if (result.data.metadata && Object.keys(result.data.metadata).length > 0) {
-          mdContent += `### Metadata\n\n`;
-          for (const key in result.data.metadata) {
-            mdContent += `- **${key}:** ${result.data.metadata[key]}\n`;
-          }
-          mdContent += '\n';
-        }
-        return mdContent;
-      }).join('---\n\n');
-      filename = 'scrape-results.md';
-      mimeType = 'text/markdown';
-    } else if (format === 'pdf') {
-      // For PDF, we'll generate a simple HTML string and let the browser print it
-      // This is a client-side print, not a true PDF generation
-      const htmlContent = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <title>Scrape Results PDF</title>
-          <style>
-            body { font-family: sans-serif; margin: 20px; }
-            .result-item { border-bottom: 1px solid #ccc; padding-bottom: 20px; margin-bottom: 20px; }
-            h1, h2, h3 { color: #333; }
-            pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
-            ul { list-style-type: none; padding: 0; }
-            li { margin-bottom: 5px; }
-          </style>
-        </head>
-        <body>
-          <h1>WebScraper Pro - Scrape Results</h1>
-          ${completedResults.map(result => `
-            <div class="result-item">
-              <h2>${result.data.title || 'Untitled Page'}</h2>
-              <p><strong>URL:</strong> <a href="${result.url}">${result.url}</a></p>
-              <p><strong>Scraped On:</strong> ${result.timestamp.toLocaleString()}</p>
-              ${result.data.description ? `<p><strong>Description:</strong> ${result.data.description}</p>` : ''}
-              ${result.data.text ? `<h3>Extracted Text</h3><pre>${result.data.text}</pre>` : ''}
-              ${result.data.links && result.data.links.length > 0 ? `
-                <h3>Links (${result.data.links.length})</h3>
-                <ul>
-                  ${result.data.links.map(link => `<li><a href="${link}">${link}</a></li>`).join('')}
-                </ul>
-              ` : ''}
-              ${result.data.images && result.data.images.length > 0 ? `
-                <h3>Images (${result.data.images.length})</h3>
-                <ul>
-                  ${result.data.images.map(image => `<li><a href="${image}">${image}</a></li>`).join('')}
-                </ul>
-              ` : ''}
-              ${result.data.metadata && Object.keys(result.data.metadata).length > 0 ? `
-                <h3>Metadata</h3>
-                <ul>
-                  ${Object.keys(result.data.metadata).map(key => `<li><strong>${key}:</strong> ${result.data.metadata![key]}</li>`).join('')}
-                </ul>
-              ` : ''}
-            </div>
-          `).join('')}
-        </body>
-        </html>
-      `;
-      
-      const printWindow = window.open('', '_blank');
-      if (printWindow) {
-        printWindow.document.write(htmlContent);
-        printWindow.document.close();
-        printWindow.print();
-      } else {
-        alert('Please allow pop-ups for PDF export.');
-      }
-      return; // PDF is handled by printWindow, no blob download needed
+    if (apiStatus !== 'online') {
+      setStatus('Backend API is offline. Please check the connection.');
+      setStatusType('error');
+      return;
     }
 
-    const blob = new Blob([data], { type: mimeType });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    setIsLoading(true);
+    setStatus('Starting scrape...');
+    setStatusType('normal');
+
+    const fullUrl = `${baseUrl.replace(/\/+$/, '')}/${topic.replace(/^\/+|\/+$/g, '')}/`;
+    console.log('Constructed URL:', fullUrl);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/scrape`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: fullUrl })
+      });
+
+      console.log('Scrape Response Status:', response.status, response.statusText);
+
+      if (!response.ok) {
+        const text = await response.text();
+        console.log('Scrape Response Body:', text.slice(0, 200));
+        setStatus(`Error: HTTP ${response.status} - ${text.slice(0, 100) || response.statusText}`);
+        setStatusType('error');
+        return;
+      }
+
+      const result = await response.json();
+      setStatus(`Success: ${result.message}. Pages found: ${result.pages_found}`);
+      setStatusType('success');
+      await listScrapedFiles();
+    } catch (error: any) {
+      console.error('Scrape Error:', error);
+      setStatus(`Network Error: ${error.message}`);
+      setStatusType('error');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const clearHistory = () => {
-    setResults([]);
+  const listScrapedFiles = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/list-scraped-data`);
+      console.log('List Files Response Status:', response.status, response.statusText);
+
+      if (!response.ok) {
+        const text = await response.text();
+        console.log('List Files Response Body:', text.slice(0, 200));
+        setScrapedFiles([]);
+        return;
+      }
+
+      const result = await response.json();
+      if (result.files && result.files.length > 0) {
+        setScrapedFiles(result.files);
+      } else {
+        setScrapedFiles([]);
+      }
+    } catch (error: any) {
+      console.error('List Files Error:', error);
+      setScrapedFiles([]);
+    }
+  };
+
+  const loadFileContent = async (filename: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/get-scraped-data/${filename}`);
+      console.log('Load File Response Status:', response.status, response.statusText);
+
+      if (!response.ok) {
+        const text = await response.text();
+        console.log('Load File Response Body:', text.slice(0, 200));
+        setSelectedFile({
+          filename,
+          content: { error: `Error loading file ${filename}: HTTP ${response.status} - ${text.slice(0, 100) || response.statusText}` }
+        });
+        return;
+      }
+
+      const data = await response.json();
+      if (typeof data === 'object' && data !== null) {
+        setSelectedFile({
+          filename,
+          content: data
+        });
+      } else {
+        setSelectedFile({
+          filename,
+          content: { data: JSON.stringify(data, null, 2) }
+        });
+      }
+    } catch (error: any) {
+      console.error('Load File Error:', error);
+      setSelectedFile({
+        filename,
+        content: { error: `Network Error loading file ${filename}: ${error.message}` }
+      });
+    }
   };
 
   const copyToClipboard = (text: string) => {
@@ -345,10 +205,10 @@ function App() {
               <div>
                 <h1 className={`text-2xl font-bold ${
                   theme === 'dark' ? 'text-white' : 'text-gray-900'
-                }`}>WebScraper Pro</h1>
+                }`}>Talk Docs. Learn Fast. Powered by AI.</h1>
                 <p className={`text-sm ${
                   theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
-                }`}>Advanced Data Extraction Tool</p>
+                }`}>Advanced Documentation Scraper</p>
               </div>
             </div>
             
@@ -409,7 +269,7 @@ function App() {
         }`}>
           {[
             { id: 'scraper', label: 'Scraper', icon: Search },
-            { id: 'history', label: 'History', icon: History },
+            { id: 'history', label: 'Files', icon: History },
             { id: 'settings', label: 'Settings', icon: Settings }
           ].map(({ id, label, icon: Icon }) => (
             <button
@@ -436,329 +296,188 @@ function App() {
         {/* Scraper Tab */}
         {activeTab === 'scraper' && (
           <div className="space-y-6">
-            {/* URL Input Section */}
+            {/* Scrape New Content Section */}
             <div className={`p-6 rounded-2xl backdrop-blur-md ${
               theme === 'dark' ? 'bg-white/10' : 'bg-white/40'
             }`}>
               <h2 className={`text-xl font-semibold mb-4 ${
                 theme === 'dark' ? 'text-white' : 'text-gray-900'
-              }`}>Add URLs to Scrape</h2>
+              }`}>Scrape New Content</h2>
               
-              <div className="flex space-x-3 mb-4">
-                <input
-                  type="url"
-                  value={url}
-                  onChange={(e) => setUrl(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && addUrl()}
-                  placeholder="https://example.com"
-                  className={`flex-1 px-4 py-3 rounded-xl backdrop-blur-md transition-all duration-300 ${
-                    theme === 'dark'
-                      ? 'bg-white/10 border border-white/20 text-white placeholder-gray-400 focus:bg-white/20 focus:border-blue-400'
-                      : 'bg-white/60 border border-black/20 text-gray-900 placeholder-gray-500 focus:bg-white/80 focus:border-blue-500'
-                  } focus:outline-none focus:ring-2 focus:ring-blue-500/50`}
-                />
-                <button
-                  onClick={addUrl}
-                  disabled={!url.trim()}
-                  className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 font-medium"
-                >
-                  Add URL
-                </button>
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <input
+                    type="text"
+                    value={baseUrl}
+                    onChange={(e) => setBaseUrl(e.target.value)}
+                    placeholder="Enter website URL (e.g., https://docs.agno.com/)"
+                    className={`px-4 py-3 rounded-xl backdrop-blur-md transition-all duration-300 ${
+                      theme === 'dark'
+                        ? 'bg-white/10 border border-white/20 text-white placeholder-gray-400 focus:bg-white/20 focus:border-blue-400'
+                        : 'bg-white/60 border border-black/20 text-gray-900 placeholder-gray-500 focus:bg-white/80 focus:border-blue-500'
+                    } focus:outline-none focus:ring-2 focus:ring-blue-500/50`}
+                  />
+                  <input
+                    type="text"
+                    value={topic}
+                    onChange={(e) => setTopic(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && scrapeUrl()}
+                    placeholder="Enter topic to learn (e.g., teams)"
+                    className={`px-4 py-3 rounded-xl backdrop-blur-md transition-all duration-300 ${
+                      theme === 'dark'
+                        ? 'bg-white/10 border border-white/20 text-white placeholder-gray-400 focus:bg-white/20 focus:border-blue-400'
+                        : 'bg-white/60 border border-black/20 text-gray-900 placeholder-gray-500 focus:bg-white/80 focus:border-blue-500'
+                    } focus:outline-none focus:ring-2 focus:ring-blue-500/50`}
+                  />
+                </div>
+
+                <div className="flex justify-center">
+                  <button
+                    onClick={scrapeUrl}
+                    disabled={!baseUrl.trim() || !topic.trim() || isLoading || apiStatus !== 'online'}
+                    className="flex items-center space-x-2 px-8 py-3 bg-gradient-to-r from-green-500 to-blue-500 text-white rounded-xl hover:from-green-600 hover:to-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 font-medium shadow-lg"
+                  >
+                    {isLoading ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        <span>Scraping...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Play className="w-4 h-4" />
+                        <span>Scrape</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
 
-              {urls.length > 0 && (
-                <div className="space-y-2">
-                  <h3 className={`font-medium ${
-                    theme === 'dark' ? 'text-gray-200' : 'text-gray-700'
-                  }`}>URLs to Scrape ({urls.length})</h3>
-                  <div className="space-y-2 max-h-32 overflow-y-auto">
-                    {urls.map((url, index) => (
-                      <div
-                        key={index}
-                        className={`flex items-center justify-between p-3 rounded-lg ${
-                          theme === 'dark' ? 'bg-white/10' : 'bg-white/60'
-                        }`}
-                      >
-                        <span className={`text-sm truncate ${
-                          theme === 'dark' ? 'text-gray-200' : 'text-gray-700'
-                        }`}>{url}</span>
-                        <button
-                          onClick={() => removeUrl(index)}
-                          className={`p-1 rounded hover:bg-red-500/20 text-red-500 transition-colors`}
-                          aria-label="Remove URL"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="flex justify-center mt-6">
-                <button
-                  onClick={startScraping}
-                  disabled={urls.length === 0 || isScrapingActive || apiStatus !== 'online'}
-                  className="flex items-center space-x-2 px-8 py-3 bg-gradient-to-r from-green-500 to-blue-500 text-white rounded-xl hover:from-green-600 hover:to-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 font-medium shadow-lg"
-                >
-                  {isScrapingActive ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      <span>Scraping...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Play className="w-4 h-4" />
-                      <span>Start Scraping</span>
-                    </>
-                  )}
-                </button>
+              {/* Status Display */}
+              <div className={`mt-4 p-4 rounded-xl border ${
+                statusType === 'error' ? 'bg-red-500/20 border-red-500/30 text-red-500' :
+                statusType === 'success' ? 'bg-green-500/20 border-green-500/30 text-green-500' :
+                theme === 'dark' ? 'bg-white/10 border-white/20 text-gray-300' : 'bg-white/60 border-black/20 text-gray-700'
+              } min-h-[50px] whitespace-pre-wrap`}>
+                {status}
               </div>
             </div>
-
-            {/* Results Section */}
-            {results.length > 0 && (
-              <div className={`p-6 rounded-2xl backdrop-blur-md ${
-                theme === 'dark' ? 'bg-white/10' : 'bg-white/40'
-              }`}>
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className={`text-xl font-semibold ${
-                    theme === 'dark' ? 'text-white' : 'text-gray-900'
-                  }`}>Recent Results</h2>
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() => exportResults('json')}
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
-                        theme === 'dark'
-                          ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30'
-                          : 'bg-blue-500/20 text-blue-600 hover:bg-blue-500/30'
-                      }`}
-                    >
-                      <Download className="w-4 h-4" />
-                      <span>JSON</span>
-                    </button>
-                    <button
-                      onClick={() => exportResults('csv')}
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
-                        theme === 'dark'
-                          ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
-                          : 'bg-green-500/20 text-green-600 hover:bg-green-500/30'
-                      }`}
-                    >
-                      <Download className="w-4 h-4" />
-                      <span>CSV</span>
-                    </button>
-                    <button
-                      onClick={() => exportResults('md')}
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
-                        theme === 'dark'
-                          ? 'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30'
-                          : 'bg-purple-500/20 text-purple-600 hover:bg-purple-500/30'
-                      }`}
-                    >
-                      <Download className="w-4 h-4" />
-                      <span>MD</span>
-                    </button>
-                    <button
-                      onClick={() => exportResults('pdf')}
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
-                        theme === 'dark'
-                          ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
-                          : 'bg-red-500/20 text-red-600 hover:bg-red-500/30'
-                      }`}
-                    >
-                      <Download className="w-4 h-4" />
-                      <span>PDF</span>
-                    </button>
-                  </div>
-                </div>
-
-                <div className="space-y-4 max-h-96 overflow-y-auto">
-                  {results.slice(0, 5).map((result) => (
-                    <div
-                      key={result.id}
-                      className={`p-4 rounded-xl transition-all duration-300 ${
-                        theme === 'dark' ? 'bg-white/10 hover:bg-white/15' : 'bg-white/60 hover:bg-white/80'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center space-x-3">
-                          <div className={`p-2 rounded-lg ${
-                            result.status === 'completed' ? 'bg-green-500/20' :
-                            result.status === 'error' ? 'bg-red-500/20' :
-                            result.status === 'scraping' ? 'bg-blue-500/20' : 'bg-gray-500/20'
-                          }`}>
-                            {result.status === 'completed' && <CheckCircle className="w-4 h-4 text-green-500" />}
-                            {result.status === 'error' && <AlertCircle className="w-4 h-4 text-red-500" />}
-                            {result.status === 'scraping' && <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />}
-                          </div>
-                          <div>
-                            <p className={`font-medium ${
-                              theme === 'dark' ? 'text-white' : 'text-gray-900'
-                            }`}>{result.data.title || 'Untitled Page'}</p>
-                            <p className={`text-sm ${
-                              theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
-                            }`}>{result.url}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <button
-                            onClick={() => copyToClipboard(result.url)}
-                            className={`p-2 rounded-lg transition-colors ${
-                              theme === 'dark'
-                                ? 'hover:bg-white/10 text-gray-400'
-                                : 'hover:bg-black/10 text-gray-600'
-                            }`}
-                            aria-label="Copy URL to clipboard"
-                          >
-                            <Copy className="w-4 h-4" />
-                          </button>
-                          <a
-                            href={result.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className={`p-2 rounded-lg transition-colors ${
-                              theme === 'dark'
-                                ? 'hover:bg-white/10 text-gray-400'
-                                : 'hover:bg-black/10 text-gray-600'
-                            }`}
-                          >
-                            <ExternalLink className="w-4 h-4" />
-                          </a>
-                        </div>
-                      </div>
-
-                      {result.status === 'completed' && (
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
-                          <div className={`p-3 rounded-lg ${
-                            theme === 'dark' ? 'bg-white/10' : 'bg-white/60'
-                          }`}>
-                            <div className="flex items-center space-x-2 mb-2">
-                              <Link className="w-4 h-4 text-blue-500" />
-                              <span className={`text-sm font-medium ${
-                                theme === 'dark' ? 'text-gray-200' : 'text-gray-700'
-                              }`}>Links</span>
-                            </div>
-                            <p className={`text-lg font-bold ${
-                              theme === 'dark' ? 'text-white' : 'text-gray-900'
-                            }`}>{result.data.links?.length || 0}</p>
-                          </div>
-                          <div className={`p-3 rounded-lg ${
-                            theme === 'dark' ? 'bg-white/10' : 'bg-white/60'
-                          }`}>
-                            <div className="flex items-center space-x-2 mb-2">
-                              <Image className="w-4 h-4 text-purple-500" />
-                              <span className={`text-sm font-medium ${
-                                theme === 'dark' ? 'text-gray-200' : 'text-gray-700'
-                              }`}>Images</span>
-                            </div>
-                            <p className={`text-lg font-bold ${
-                              theme === 'dark' ? 'text-white' : 'text-gray-900'
-                            }`}>{result.data.images?.length || 0}</p>
-                          </div>
-                          <div className={`p-3 rounded-lg ${
-                            theme === 'dark' ? 'bg-white/10' : 'bg-white/60'
-                          }`}>
-                            <div className="flex items-center space-x-2 mb-2">
-                              <FileText className="w-4 h-4 text-green-500" />
-                              <span className={`text-sm font-medium ${
-                                theme === 'dark' ? 'text-gray-200' : 'text-gray-700'
-                              }`}>Text</span>
-                            </div>
-                            <p className={`text-lg font-bold ${
-                              theme === 'dark' ? 'text-white' : 'text-gray-900'
-                            }`}>{result.data.text ? Math.floor(result.data.text.length / 100) : 0}k</p>
-                          </div>
-                          <div className={`p-3 rounded-lg ${
-                            theme === 'dark' ? 'bg-white/10' : 'bg-white/60'
-                          }`}>
-                            <div className="flex items-center space-x-2 mb-2">
-                              <Database className="w-4 h-4 text-orange-500" />
-                              <span className={`text-sm font-medium ${
-                                theme === 'dark' ? 'text-gray-200' : 'text-gray-700'
-                              }`}>Metadata</span>
-                            </div>
-                            <p className={`text-lg font-bold ${
-                              theme === 'dark' ? 'text-white' : 'text-gray-900'
-                            }`}>{Object.keys(result.data.metadata || {}).length}</p>
-                          </div>
-                        </div>
-                      )}
-
-                      {result.status === 'error' && (
-                        <p className="text-red-500 text-sm mt-2">{result.error}</p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         )}
 
-        {/* History Tab */}
+        {/* Files Tab */}
         {activeTab === 'history' && (
-          <div className={`p-6 rounded-2xl backdrop-blur-md ${
-            theme === 'dark' ? 'bg-white/10' : 'bg-white/40'
-          }`}>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className={`text-xl font-semibold ${
-                theme === 'dark' ? 'text-white' : 'text-gray-900'
-              }`}>Scraping History ({results.length})</h2>
-              <button
-                onClick={clearHistory}
-                className="flex items-center space-x-2 px-4 py-2 bg-red-500/20 text-red-500 rounded-lg hover:bg-red-500/30 transition-colors"
-              >
-                <Trash2 className="w-4 h-4" />
-                <span>Clear All</span>
-              </button>
-            </div>
-
-            {results.length === 0 ? (
-              <div className="text-center py-12">
-                <History className={`w-16 h-16 mx-auto mb-4 ${
-                  theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
-                }`} />
-                <p className={`text-lg ${
-                  theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
-                }`}>No scraping history yet</p>
-                <p className={`text-sm ${
-                  theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
-                }`}>Start scraping some URLs to see results here</p>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Available Files */}
+            <div className={`p-6 rounded-2xl backdrop-blur-md ${
+              theme === 'dark' ? 'bg-white/10' : 'bg-white/40'
+            }`}>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className={`text-xl font-semibold ${
+                  theme === 'dark' ? 'text-white' : 'text-gray-900'
+                }`}>Available Docs Material</h2>
+                <button
+                  onClick={listScrapedFiles}
+                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                    theme === 'dark'
+                      ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30'
+                      : 'bg-blue-500/20 text-blue-600 hover:bg-blue-500/30'
+                  }`}
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  <span>Refresh</span>
+                </button>
               </div>
-            ) : (
-              <div className="space-y-4">
-                {results.map((result) => (
-                  <div
-                    key={result.id}
-                    className={`p-4 rounded-xl ${
-                      theme === 'dark' ? 'bg-white/10' : 'bg-white/60'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className={`font-medium ${
-                          theme === 'dark' ? 'text-white' : 'text-gray-900'
-                        }`}>{result.data.title || 'Untitled Page'}</p>
-                        <p className={`text-sm ${
-                          theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
-                        }`}>{result.url}</p>
-                        <p className={`text-xs ${
-                          theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
-                        }`}>{result.timestamp.toLocaleString()}</p>
-                      </div>
-                      <div className={`px-3 py-1 rounded-full text-xs font-medium ${
-                        result.status === 'completed' ? 'bg-green-500/20 text-green-500' :
-                        result.status === 'error' ? 'bg-red-500/20 text-red-500' :
-                        'bg-blue-500/20 text-blue-500'
-                      }`}>
-                        {result.status}
+
+              {scrapedFiles.length === 0 ? (
+                <div className="text-center py-12">
+                  <FileText className={`w-16 h-16 mx-auto mb-4 ${
+                    theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                  }`} />
+                  <p className={`text-lg ${
+                    theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                  }`}>No scraped files found</p>
+                  <p className={`text-sm ${
+                    theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                  }`}>Scrape some documentation to see files here</p>
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-96 overflow-y-auto">
+                  {scrapedFiles.map((filename) => (
+                    <div
+                      key={filename}
+                      onClick={() => loadFileContent(filename)}
+                      className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                        selectedFile?.filename === filename
+                          ? theme === 'dark' ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-500/20 text-blue-600'
+                          : theme === 'dark' ? 'bg-white/10 hover:bg-white/15 text-gray-200' : 'bg-white/60 hover:bg-white/80 text-gray-700'
+                      }`}
+                    >
+                      <div className="flex items-center space-x-2">
+                        <FileText className="w-4 h-4" />
+                        <span className="text-sm font-medium truncate">{filename}</span>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* File Content */}
+            <div className={`p-6 rounded-2xl backdrop-blur-md ${
+              theme === 'dark' ? 'bg-white/10' : 'bg-white/40'
+            }`}>
+              <h2 className={`text-xl font-semibold mb-4 ${
+                theme === 'dark' ? 'text-white' : 'text-gray-900'
+              }`}>Documentation Content</h2>
+
+              {!selectedFile ? (
+                <div className="text-center py-12">
+                  <Database className={`w-16 h-16 mx-auto mb-4 ${
+                    theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                  }`} />
+                  <p className={`text-lg ${
+                    theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                  }`}>Select a file to view content</p>
+                  <p className={`text-sm ${
+                    theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                  }`}>Click on a file from the list to see its content</p>
+                </div>
+              ) : (
+                <div className="space-y-4 max-h-96 overflow-y-auto">
+                  {Object.entries(selectedFile.content).map(([url, content]) => (
+                    <div
+                      key={url}
+                      className={`border-b pb-4 mb-4 ${
+                        theme === 'dark' ? 'border-white/20' : 'border-black/20'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className={`font-medium text-sm ${
+                          theme === 'dark' ? 'text-blue-400' : 'text-blue-600'
+                        }`}>
+                          Source URL: {url}
+                        </h3>
+                        <button
+                          onClick={() => copyToClipboard(url)}
+                          className={`p-1 rounded transition-colors ${
+                            theme === 'dark'
+                              ? 'hover:bg-white/10 text-gray-400'
+                              : 'hover:bg-black/10 text-gray-600'
+                          }`}
+                        >
+                          <Copy className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <pre className={`text-sm whitespace-pre-wrap break-words p-3 rounded-lg ${
+                        theme === 'dark' ? 'bg-black/20 text-gray-300' : 'bg-white/60 text-gray-700'
+                      }`}>
+                        {content}
+                      </pre>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -769,79 +488,79 @@ function App() {
           }`}>
             <h2 className={`text-xl font-semibold mb-6 ${
               theme === 'dark' ? 'text-white' : 'text-gray-900'
-            }`}>Scraping Options</h2>
+            }`}>Settings</h2>
 
             <div className="space-y-6">
               <div>
                 <h3 className={`text-lg font-medium mb-4 ${
                   theme === 'dark' ? 'text-gray-200' : 'text-gray-700'
-                }`}>Data Extraction</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {[
-                    { key: 'extractText', label: 'Extract Text Content', icon: FileText },
-                    { key: 'extractLinks', label: 'Extract Links', icon: Link },
-                    { key: 'extractImages', label: 'Extract Images', icon: Image },
-                    { key: 'extractMetadata', label: 'Extract Metadata', icon: Database }
-                  ].map(({ key, label, icon: Icon }) => (
-                    <label
-                      key={key}
-                      className={`flex items-center space-x-3 p-4 rounded-xl cursor-pointer ${
-                        theme === 'dark' ? 'bg-white/10 hover:bg-white/15' : 'bg-white/60 hover:bg-white/80'
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={options[key as keyof ScrapeOptions] as boolean}
-                        onChange={(e) => setOptions({ ...options, [key]: e.target.checked })}
-                        className="rounded text-blue-500"
-                      />
-                      <Icon className="w-5 h-5 text-blue-500" />
-                      <span className={`font-medium ${
+                }`}>API Configuration</h3>
+                <div className={`p-4 rounded-xl ${
+                  theme === 'dark' ? 'bg-white/10' : 'bg-white/60'
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className={`font-medium ${
                         theme === 'dark' ? 'text-white' : 'text-gray-900'
-                      }`}>{label}</span>
-                    </label>
-                  ))}
+                      }`}>Backend URL</p>
+                      <p className={`text-sm ${
+                        theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                      }`}>{API_BASE_URL}</p>
+                    </div>
+                    <div className={`px-3 py-1 rounded-full text-xs font-medium ${
+                      apiStatus === 'online' ? 'bg-green-500/20 text-green-500' :
+                      apiStatus === 'offline' ? 'bg-red-500/20 text-red-500' :
+                      'bg-yellow-500/20 text-yellow-500'
+                    }`}>
+                      {apiStatus}
+                    </div>
+                  </div>
                 </div>
               </div>
 
               <div>
                 <h3 className={`text-lg font-medium mb-4 ${
                   theme === 'dark' ? 'text-gray-200' : 'text-gray-700'
-                }`}>Advanced Options</h3>
-                <div className="space-y-4">
-                  <label className={`flex items-center justify-between p-4 rounded-xl ${
-                    theme === 'dark' ? 'bg-white/10' : 'bg-white/60'
-                  }`}>
-                    <span className={`font-medium ${
-                      theme === 'dark' ? 'text-white' : 'text-gray-900'
-                    }`}>Follow Redirects</span>
-                    <input
-                      type="checkbox"
-                      checked={options.followRedirects}
-                      onChange={(e) => setOptions({ ...options, followRedirects: e.target.checked })}
-                      className="rounded text-blue-500"
-                    />
-                  </label>
-                  
-                  <div className={`p-4 rounded-xl ${
-                    theme === 'dark' ? 'bg-white/10' : 'bg-white/60'
-                  }`}>
-                    <label htmlFor="timeout-range" className={`block font-medium mb-2 ${
-                      theme === 'dark' ? 'text-white' : 'text-gray-900'
-                    }`}>
-                      Timeout (seconds): {options.timeout / 1000}
-                    </label>
-                    <input
-                      id="timeout-range"
-                      type="range"
-                      min="5000"
-                      max="60000"
-                      step="5000"
-                      value={options.timeout}
-                      onChange={(e) => setOptions({ ...options, timeout: parseInt(e.target.value) })}
-                      className="w-full"
-                    />
+                }`}>Appearance</h3>
+                <div className={`p-4 rounded-xl ${
+                  theme === 'dark' ? 'bg-white/10' : 'bg-white/60'
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className={`font-medium ${
+                        theme === 'dark' ? 'text-white' : 'text-gray-900'
+                      }`}>Theme</p>
+                      <p className={`text-sm ${
+                        theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                      }`}>Choose your preferred theme</p>
+                    </div>
+                    <button
+                      onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                      className={`px-4 py-2 rounded-lg transition-colors ${
+                        theme === 'dark'
+                          ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30'
+                          : 'bg-blue-500/20 text-blue-600 hover:bg-blue-500/30'
+                      }`}
+                    >
+                      {theme === 'dark' ? '🌙 Dark' : '☀️ Light'}
+                    </button>
                   </div>
+                </div>
+              </div>
+
+              <div>
+                <h3 className={`text-lg font-medium mb-4 ${
+                  theme === 'dark' ? 'text-gray-200' : 'text-gray-700'
+                }`}>About</h3>
+                <div className={`p-4 rounded-xl ${
+                  theme === 'dark' ? 'bg-white/10' : 'bg-white/60'
+                }`}>
+                  <p className={`text-sm ${
+                    theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                  }`}>
+                    WebScraper Pro - Advanced documentation scraping tool with AI-powered content extraction.
+                    Built with React, TypeScript, and FastAPI.
+                  </p>
                 </div>
               </div>
             </div>
