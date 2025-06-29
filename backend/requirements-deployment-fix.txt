@@ -1,0 +1,8 @@
+fastapi==0.104.1
+uvicorn==0.24.0
+python-multipart==0.0.6
+playwright==1.40.0
+beautifulsoup4==4.12.2
+aiofiles==23.2.1
+# Removed pydantic to avoid Rust compilation on Python 3.13
+# Your exact code works, just need deployment-compatible dependencies
