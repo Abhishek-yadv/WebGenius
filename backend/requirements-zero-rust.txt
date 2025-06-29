@@ -1,0 +1,8 @@
+fastapi==0.88.0
+uvicorn==0.20.0
+python-multipart==0.0.5
+playwright==1.30.0
+beautifulsoup4==4.11.1
+aiofiles==22.1.0
+# These are the OLDEST stable versions that work together
+# and have ZERO Rust/C++ compilation requirements
