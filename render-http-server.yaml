@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: webscraper-backend
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: "python -m pip install --upgrade pip && python -m pip install playwright==1.40.0 beautifulsoup4==4.12.2 && python -m playwright install chromium"
+    startCommand: "cd /opt/render/project/src && python backend/main-http-server.py"
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: PYTHONPATH
+        value: /opt/render/project/src
+    healthCheckPath: /api/health
