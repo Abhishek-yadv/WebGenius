@@ -20,7 +20,7 @@ import uuid
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Models
+# Models - Updated for Pydantic v1 compatibility
 class ScrapeRequest(BaseModel):
     url: HttpUrl
 
