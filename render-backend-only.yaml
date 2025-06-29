@@ -4,11 +4,13 @@ services:
     env: python
     region: oregon
     plan: free
-    buildCommand: "pip install -r backend/requirements.txt && python -m playwright install chromium"
+    buildCommand: "pip install --upgrade pip && pip install -r backend/requirements.txt && python -m playwright install chromium"
     startCommand: "python backend/main.py"
     envVars:
       - key: PORT
         value: 10000
       - key: PYTHONPATH
         value: /opt/render/project/src
+      - key: PLAYWRIGHT_BROWSERS_PATH
+        value: /opt/render/project/.playwright
     healthCheckPath: /api/health
