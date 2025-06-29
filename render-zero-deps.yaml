@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: webscraper-backend
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: "python -m pip install --upgrade pip && python -m pip install requests==2.31.0 beautifulsoup4==4.12.2"
+    startCommand: "cd /opt/render/project/src && python backend/main-zero-deps.py"
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: PYTHONPATH
+        value: /opt/render/project/src
+    healthCheckPath: /api/health
