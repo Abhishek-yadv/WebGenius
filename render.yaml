@@ -1,4 +1,5 @@
 services:
+  # Backend API Service
   - type: web
     name: webscraper-backend
     env: python
@@ -12,3 +13,18 @@ services:
       - key: PYTHONPATH
         value: /opt/render/project/src
     healthCheckPath: /api/health
+
+  # Frontend Static Site
+  - type: web
+    name: webscraper-frontend
+    env: node
+    region: oregon
+    plan: free
+    buildCommand: "npm install && npm run build"
+    startCommand: "npm start"
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: VITE_RENDER_BACKEND_URL
+        value: https://webscraper-backend.onrender.com
+    staticPublishPath: ./dist

@@ -59,44 +59,47 @@ A modern, full-stack web scraping application with a beautiful React frontend an
 
 #### Production Deployment
 
-##### Frontend (Netlify)
-The frontend is already configured for Netlify deployment:
+##### Option 1: Render (Recommended)
 
-1. Build the project: `npm run build`
-2. Deploy the `dist/` folder to Netlify
-3. The frontend will automatically detect if it's in production mode
-
-##### Backend (Render)
-The backend is configured for Render deployment:
-
+**Backend Deployment:**
 1. **Sign up at [Render](https://render.com)**
 2. **Create a new Web Service**
 3. **Connect your GitHub repository**
-4. **Render will automatically detect the configuration:**
-   - Uses `render.yaml` for configuration
-   - Installs Python dependencies from `backend/requirements.txt`
-   - Installs Playwright Chromium browser
-   - Starts the server with `python main.py`
-5. **Deploy and get your backend URL**
+4. **Configure the service:**
+   - **Build Command:** `pip install -r backend/requirements.txt && python -m playwright install chromium`
+   - **Start Command:** `python backend/main.py`
+   - **Environment Variables:**
+     - `PORT`: 10000
+     - `PYTHONPATH`: /opt/render/project/src
 
-##### Alternative: Manual Render Setup
-If automatic detection doesn't work:
+**Frontend Deployment:**
+1. **Create another Web Service for the frontend**
+2. **Configure the service:**
+   - **Build Command:** `npm install && npm run build`
+   - **Start Command:** `npm start`
+   - **Environment Variables:**
+     - `PORT`: 10000
+     - `VITE_RENDER_BACKEND_URL`: `https://your-backend-service.onrender.com`
 
-1. **Build Command:** `cd backend && pip install -r requirements.txt && python -m playwright install chromium`
-2. **Start Command:** `cd backend && python main.py`
-3. **Environment Variables:**
-   - `PORT`: 10000 (Render default)
-   - `PYTHONPATH`: /opt/render/project/src/backend
+##### Option 2: Separate Deployments
 
-##### Update Frontend Configuration
-After deploying your backend to Render:
+**Frontend (Netlify):**
+1. Build the project: `npm run build`
+2. Deploy the `dist/` folder to Netlify
+3. Set environment variable: `VITE_RENDER_BACKEND_URL=https://your-backend.onrender.com`
+
+**Backend (Render):**
+1. Deploy using the backend configuration above
+
+##### Update Configuration
+After deploying your backend:
 
 1. **Copy `.env.example` to `.env`**
-2. **Update the Render backend URL:**
+2. **Update the backend URL:**
    ```env
-   VITE_RENDER_BACKEND_URL=https://your-actual-app.onrender.com
+   VITE_RENDER_BACKEND_URL=https://your-actual-backend.onrender.com
    ```
-3. **Redeploy your frontend to Netlify**
+3. **Redeploy your frontend**
 
 ## API Documentation
 
@@ -147,6 +150,7 @@ Scraped data is automatically saved to the `scraped_data/` directory in JSON for
 npm run dev        # Start development server
 npm run build      # Build for production
 npm run lint       # Run ESLint
+npm start          # Start production preview server
 ```
 
 ### Backend Development
@@ -157,11 +161,11 @@ npm run backend    # Start backend with auto-reload
 ## Deployment Architecture
 
 ```
-Frontend (Netlify) ←→ Backend (Render)
-     ↓                      ↓
-Static Files          Python + FastAPI
-React SPA            Playwright Scraper
-                     Data Storage
+Frontend (Render/Netlify) ←→ Backend (Render)
+     ↓                           ↓
+Static Files/Node.js        Python + FastAPI
+React SPA                   Playwright Scraper
+                           Data Storage
 ```
 
 ## Environment Variables
@@ -170,20 +174,26 @@ React SPA            Playwright Scraper
 - Automatically uses `localhost:5000` for API calls
 
 ### Production
-- `VITE_RENDER_BACKEND_URL` - Your Render backend URL
+- `VITE_RENDER_BACKEND_URL` - Your backend service URL
+- `PORT` - Server port (automatically set by hosting providers)
 
 ## Troubleshooting
 
 ### Render Deployment Issues
-1. **Build fails**: Check that `render.yaml` is in the root directory
+1. **Build fails**: Check that dependencies are correctly specified
 2. **Playwright issues**: Ensure Chromium is installed in build command
-3. **Port issues**: Render uses port 10000 by default, our app adapts automatically
+3. **Port issues**: Render automatically sets PORT environment variable
 4. **Memory issues**: Consider upgrading to a paid Render plan for better performance
 
 ### Frontend Connection Issues
 1. **CORS errors**: Backend is configured to allow all origins
-2. **API offline**: Check that your Render service is running
-3. **Wrong URL**: Verify `VITE_RENDER_BACKEND_URL` in your `.env` file
+2. **API offline**: Check that your backend service is running
+3. **Wrong URL**: Verify `VITE_RENDER_BACKEND_URL` in your environment variables
+
+### Common Deployment Errors
+- **"Command not found"**: Make sure `start` script is defined in package.json
+- **Build failures**: Check that all dependencies are listed in package.json
+- **Environment variables**: Ensure all required env vars are set in your hosting platform
 
 ## Contributing
 
