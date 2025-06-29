@@ -1,0 +1,4 @@
+playwright==1.40.0
+beautifulsoup4==4.12.2
+# Absolute minimal - using Python's built-in http.server
+# No Flask, no FastAPI, no greenlet, no compilation
