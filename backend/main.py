@@ -20,7 +20,7 @@ import uuid
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Models - Updated for Pydantic v1 compatibility
+# Models
 class ScrapeRequest(BaseModel):
     url: HttpUrl
 
@@ -108,6 +108,7 @@ async def extract_content_from_page(page, url):
             await page.wait_for_selector("body", timeout=5000)
 
         content = await page.content()
+        # Use html.parser instead of lxml to avoid compilation issues
         soup = BeautifulSoup(content, "html.parser")
 
         extracted_data = {

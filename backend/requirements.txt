@@ -1,9 +1,9 @@
-# Ultra-stable versions compatible with Python 3.8-3.12
-fastapi==0.88.0
-uvicorn[standard]==0.20.0
-pydantic==1.10.2
-python-multipart==0.0.5
-playwright==1.30.0
-beautifulsoup4==4.11.1
-aiofiles==22.1.0
-lxml==4.9.1
+# Minimal dependencies that work with Python 3.13
+fastapi==0.104.1
+uvicorn==0.24.0
+pydantic==2.5.0
+python-multipart==0.0.6
+playwright==1.40.0
+beautifulsoup4==4.12.2
+aiofiles==23.2.1
+# Removed lxml - using html.parser instead
