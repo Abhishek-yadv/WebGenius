@@ -1,0 +1,9 @@
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.5.0
+python-multipart==0.0.6
+playwright==1.40.0
+beautifulsoup4==4.12.2
+aiofiles==23.2.1
+# Exact replica of your working dependencies
+# Using html.parser instead of lxml to avoid C++ compilation on Python 3.13
