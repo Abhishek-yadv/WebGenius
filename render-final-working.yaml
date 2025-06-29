@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: webscraper-backend
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: "python -m pip install --upgrade pip && python -m pip install --no-cache-dir -r backend/requirements-final.txt && python -m playwright install chromium"
+    startCommand: "python backend/main-minimal.py"
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: PYTHONPATH
+        value: /opt/render/project/src
+      - key: PIP_NO_CACHE_DIR
+        value: 1
+      - key: PYTHONDONTWRITEBYTECODE
+        value: 1
+    healthCheckPath: /api/health
