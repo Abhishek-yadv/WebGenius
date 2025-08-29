@@ -1,6 +1,0 @@
-flask==2.3.3
-playwright==1.40.0
-beautifulsoup4==4.12.2
-aiofiles==23.2.1
-# Flask-based solution - NO FastAPI, NO Pydantic, NO Rust compilation
-# Pure Python web framework that works with Python 3.13
