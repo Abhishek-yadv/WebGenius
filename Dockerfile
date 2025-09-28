@@ -1,4 +1,6 @@
+# =========================
 # Stage 1: Build Frontend
+# =========================
 FROM node:18-alpine AS frontend-builder
 
 WORKDIR /app/frontend
@@ -16,51 +18,79 @@ COPY . .
 RUN npm run build
 
 
-# Stage 2: Python Backend with Frontend
+# =========================
+# Stage 2: Python Backend + Frontend
+# =========================
 FROM python:3.12-slim
 
 WORKDIR /app
 
+# -------------------------
 # Install system dependencies
+# -------------------------
 RUN apt-get update && apt-get install -y \
     wget \
     gnupg \
     curl \
+    ca-certificates \
+    libnss3 \
+    libatk-bridge2.0-0 \
+    libx11-xcb1 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxrandr2 \
+    libgbm1 \
+    libasound2 \
+    fonts-liberation \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy and install Python requirements
+# -------------------------
+# Install Python dependencies
+# -------------------------
 COPY backend/requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Install Playwright and Chromium browser
+# -------------------------
+# Install Playwright globally
+# -------------------------
+ENV PLAYWRIGHT_BROWSERS_PATH=/usr/local/share/ms-playwright
+RUN pip install --no-cache-dir playwright
 RUN playwright install chromium
-RUN playwright install-deps chromium
 
-# Copy backend code
+# -------------------------
+# Copy backend and frontend
+# -------------------------
 COPY backend/ ./backend/
-
-# Copy built frontend from previous stage
 COPY --from=frontend-builder /app/frontend/dist ./static
 
-# Create necessary directories
+# -------------------------
+# Create directories
+# -------------------------
 RUN mkdir -p /app/scraped_data /app/output /app/debug
 
-# Set environment variables
+# -------------------------
+# Create non-root user
+# -------------------------
+RUN useradd --create-home --shell /bin/bash webgen
+RUN chown -R webgen:webgen /app /usr/local/share/ms-playwright
+USER webgen
+
+# -------------------------
+# Environment variables
+# -------------------------
 ENV PYTHONPATH=/app
 ENV PORT=5000
 ENV NODE_ENV=production
 
-# Create non-root user for security
-RUN useradd --create-home --shell /bin/bash webgen
-RUN chown -R webgen:webgen /app
-USER webgen
-
-# Health check
+# -------------------------
+# Health check & port
+# -------------------------
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:5000/api/health || exit 1
 
-# Expose port
 EXPOSE 5000
 
-# Run the application
+# -------------------------
+# Run the backend
+# -------------------------
 CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "5000"]
