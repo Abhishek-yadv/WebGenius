@@ -7,7 +7,7 @@ WORKDIR /app/frontend
 COPY package*.json ./
 
 # Install dependencies
-RUN npm ci --only=production
+RUN npm ci
 
 # Copy source code
 COPY . .
@@ -62,4 +62,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 EXPOSE 5000
 
 # Run the application
-CMD ["python", "backend/main.py"]
+CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "5000"]
