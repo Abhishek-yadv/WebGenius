@@ -433,3 +433,224 @@ export const FileListItem: React.FC<FileListItemProps> = ({
     </div>
   );
 };
+
+// Content Display Components
+interface ContentViewerProps {
+  content: string;
+  isMarkdown?: boolean;
+  maxHeight?: string;
+  showCopyButton?: boolean;
+  title?: string;
+}
+
+export const ContentViewer: React.FC<ContentViewerProps> = ({
+  content,
+  isMarkdown = false,
+  maxHeight = '400px',
+  showCopyButton = true,
+  title
+}) => {
+  const [copied, setCopied] = React.useState(false);
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
+    }
+  };
+
+  const formatMarkdown = (text: string) => {
+    // Simple markdown-like formatting
+    return text
+      .replace(/^# (.*$)/gm, '<h1 class="text-2xl font-bold mb-4 text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-2">$1</h1>')
+      .replace(/^## (.*$)/gm, '<h2 class="text-xl font-semibold mb-3 text-gray-800 dark:text-gray-200 mt-6">$1</h2>')
+      .replace(/^### (.*$)/gm, '<h3 class="text-lg font-medium mb-2 text-gray-700 dark:text-gray-300 mt-4">$1</h3>')
+      .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-gray-900 dark:text-white">$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em class="italic text-gray-700 dark:text-gray-300">$1</em>')
+      .replace(/`([^`]+)`/g, '<code class="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded text-sm font-mono text-pink-600 dark:text-pink-400 border">$1</code>')
+      .replace(/^- (.*$)/gm, '<li class="ml-4 mb-1 text-gray-700 dark:text-gray-300">• $1</li>')
+      .replace(/^\d+\. (.*$)/gm, '<li class="ml-4 mb-1 text-gray-700 dark:text-gray-300 list-decimal">$1</li>')
+      .replace(/\n\n/g, '</p><p class="mb-4 text-gray-700 dark:text-gray-300 leading-relaxed">')
+      .replace(/^(?!<[h|l|c])/gm, '<p class="mb-4 text-gray-700 dark:text-gray-300 leading-relaxed">');
+  };
+
+  return (
+    <div className="relative">
+      {(title || showCopyButton) && (
+        <div className="flex items-center justify-between mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+          {title && (
+            <h4 className="text-sm font-semibold text-gray-900 dark:text-white">{title}</h4>
+          )}
+          {showCopyButton && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => copyToClipboard(content)}
+              className={`transition-colors ${
+                copied 
+                  ? 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20' 
+                  : 'hover:bg-gray-100 dark:hover:bg-gray-800'
+              }`}
+            >
+              {copied ? '✓ Copied!' : '📋 Copy'}
+            </Button>
+          )}
+        </div>
+      )}
+      <div 
+        className="overflow-y-auto p-4 rounded-lg border bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700"
+        style={{ maxHeight }}
+      >
+        {isMarkdown ? (
+          <div 
+            className="prose prose-sm max-w-none"
+            dangerouslySetInnerHTML={{ __html: formatMarkdown(content) }}
+          />
+        ) : (
+          <pre className="whitespace-pre-wrap text-sm text-gray-800 dark:text-gray-200 font-mono leading-relaxed">
+            {content}
+          </pre>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Enhanced File Content Item
+interface FileContentItemProps {
+  url: string;
+  content: string;
+  theme: 'light' | 'dark';
+  onCopyUrl?: (url: string) => void;
+  onCopyContent?: (content: string) => void;
+}
+
+export const FileContentItem: React.FC<FileContentItemProps> = ({
+  url,
+  content,
+  theme,
+  onCopyUrl,
+  onCopyContent
+}) => {
+  const [viewMode, setViewMode] = React.useState<'formatted' | 'raw'>('formatted');
+  const [isExpanded, setIsExpanded] = React.useState(false);
+  const [copied, setCopied] = React.useState<{ url: boolean; content: boolean }>({ url: false, content: false });
+  
+  const isMarkdown = content.includes('#') || content.includes('**') || content.includes('- ');
+  const truncatedContent = isExpanded ? content : content.substring(0, 800);
+  const shouldTruncate = content.length > 800;
+
+  const copyToClipboard = async (text: string, type: 'url' | 'content') => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(prev => ({ ...prev, [type]: true }));
+      setTimeout(() => setCopied(prev => ({ ...prev, [type]: false })), 2000);
+      if (type === 'url' && onCopyUrl) onCopyUrl(text);
+      if (type === 'content' && onCopyContent) onCopyContent(text);
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
+    }
+  };
+
+  return (
+    <Card variant="default" className="p-6 animate-scale-in">
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex items-center space-x-3 flex-1 min-w-0">
+          <div className="w-3 h-3 bg-green-500 rounded-full flex-shrink-0 animate-pulse"></div>
+          <div className="min-w-0 flex-1">
+            <h3 className={`font-medium text-sm mb-1 ${
+              theme === 'dark' ? 'text-blue-400' : 'text-blue-600'
+            }`}>
+              📄 {url.replace(/https?:\/\//, '').split('/').pop() || 'Document'}
+            </h3>
+            <p className={`text-xs truncate ${
+              theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+            }`}>
+              {url}
+            </p>
+          </div>
+        </div>
+        <div className="flex space-x-1 flex-shrink-0">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setViewMode(viewMode === 'formatted' ? 'raw' : 'formatted')}
+            className={`text-xs px-3 py-1 ${
+              viewMode === 'formatted' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : ''
+            }`}
+          >
+            {viewMode === 'formatted' ? '🔤 Raw' : '✨ Format'}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => window.open(url, '_blank')}
+            className="text-xs px-3 py-1"
+          >
+            🔗 Open
+          </Button>
+        </div>
+      </div>
+      
+      <div className="mb-4">
+        <div className="flex space-x-2 mb-3">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => copyToClipboard(url, 'url')}
+            className={`text-xs px-3 py-1 ${
+              copied.url 
+                ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400' 
+                : 'hover:bg-gray-100 dark:hover:bg-gray-800'
+            }`}
+          >
+            {copied.url ? '✅ URL Copied!' : '📋 Copy URL'}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => copyToClipboard(content, 'content')}
+            className={`text-xs px-3 py-1 ${
+              copied.content 
+                ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400' 
+                : 'hover:bg-gray-100 dark:hover:bg-gray-800'
+            }`}
+          >
+            {copied.content ? '✅ Content Copied!' : '📝 Copy Content'}
+          </Button>
+          <span className={`text-xs px-2 py-1 rounded bg-gray-100 dark:bg-gray-800 ${
+            theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+          }`}>
+            {content.length.toLocaleString()} chars
+          </span>
+        </div>
+        
+        <ContentViewer
+          content={shouldTruncate && !isExpanded ? truncatedContent + '\n\n...' : content}
+          isMarkdown={viewMode === 'formatted' && isMarkdown}
+          maxHeight="400px"
+          showCopyButton={false}
+        />
+      </div>
+      
+      {shouldTruncate && (
+        <div className="text-center pt-3 border-t border-gray-200 dark:border-gray-700">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="text-xs"
+          >
+            {isExpanded 
+              ? '👆 Show Less' 
+              : `👇 Show More (+${(content.length - 800).toLocaleString()} characters)`
+            }
+          </Button>
+        </div>
+      )}
+    </Card>
+  );
+};

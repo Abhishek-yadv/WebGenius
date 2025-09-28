@@ -1,31 +1,14 @@
 import { useState, useEffect } from 'react';
 import { 
   Globe, Search, History, Settings, FileText, Database, Play, 
-  CheckCircle, AlertCircle, Copy, Server, RefreshCw, Sparkles,
-  Zap, Brain, Download, ExternalLink, Moon, Sun
+  CheckCircle, AlertCircle, Server, RefreshCw, Sparkles,
+  Zap, Brain, Download
 } from 'lucide-react';
 import { API_BASE_URL } from './config';
 import {
-  Button, Card, StatusBadge, InputField, TabButton, 
-  EmptyState, FileListItem, LoadingSpinner, Toast,
-  ProgressBar
+  Button, Card, InputField, 
+  EmptyState, FileListItem, FileContentItem
 } from './components';
-
-interface ScrapeResult {
-  id: string;
-  url: string;
-  timestamp: Date;
-  status: 'pending' | 'scraping' | 'completed' | 'error';
-  data: {
-    title?: string;
-    description?: string;
-    links?: string[];
-    images?: string[];
-    text?: string;
-    metadata?: Record<string, any>;
-  };
-  error?: string;
-}
 
 interface ScrapedFile {
   filename: string;
@@ -481,7 +464,7 @@ function App() {
                 />
               ) : (
                 <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {scrapedFiles.map((filename, index) => (
+                  {scrapedFiles.map((filename) => (
                     <FileListItem
                       key={filename}
                       filename={filename}
@@ -534,39 +517,14 @@ function App() {
               ) : (
                 <div className="space-y-4 max-h-96 overflow-y-auto">
                   {Object.entries(selectedFile.content).map(([url, content]) => (
-                    <Card key={url} variant="default" className="p-4 animate-scale-in">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center space-x-2">
-                          <ExternalLink className="w-4 h-4 text-blue-500" />
-                          <h3 className={`font-medium text-sm truncate ${
-                            theme === 'dark' ? 'text-blue-400' : 'text-blue-600'
-                          }`}>
-                            {url.replace(/https?:\/\//, '').substring(0, 50)}...
-                          </h3>
-                        </div>
-                        <div className="flex space-x-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            icon={ExternalLink}
-                            onClick={() => window.open(url, '_blank')}
-                          />
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            icon={Copy}
-                            onClick={() => copyToClipboard(url)}
-                          />
-                        </div>
-                      </div>
-                      <div className={`prose-custom text-sm whitespace-pre-wrap break-words p-4 rounded-lg border ${
-                        theme === 'dark' 
-                          ? 'bg-gray-800/50 border-gray-700 text-gray-300' 
-                          : 'bg-gray-50/50 border-gray-200 text-gray-700'
-                      }`}>
-                        {content}
-                      </div>
-                    </Card>
+                    <FileContentItem
+                      key={url}
+                      url={url}
+                      content={typeof content === 'string' ? content : JSON.stringify(content, null, 2)}
+                      theme={theme}
+                      onCopyUrl={copyToClipboard}
+                      onCopyContent={copyToClipboard}
+                    />
                   ))}
                 </div>
               )}
