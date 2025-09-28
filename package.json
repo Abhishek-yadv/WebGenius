@@ -9,7 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "start": "vite preview --host 0.0.0.0 --port $PORT",
-    "backend": "python backend/main.py",
+    "backend": "backend\\.venv\\Scripts\\activate.bat && python backend/main.py",
     "install-backend": "python -m pip install -r backend/requirements.txt && python -m playwright install chromium"
   },
   "dependencies": {

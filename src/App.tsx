@@ -1,6 +1,15 @@
 import { useState, useEffect } from 'react';
-import { Globe, Search, Download, History, Settings, FileText, Link, Image, Database, Trash2, Play, CheckCircle, AlertCircle, Copy, ExternalLink, Server, RefreshCw } from 'lucide-react';
+import { 
+  Globe, Search, History, Settings, FileText, Database, Play, 
+  CheckCircle, AlertCircle, Copy, Server, RefreshCw, Sparkles,
+  Zap, Brain, Download, ExternalLink, Moon, Sun
+} from 'lucide-react';
 import { API_BASE_URL } from './config';
+import {
+  Button, Card, StatusBadge, InputField, TabButton, 
+  EmptyState, FileListItem, LoadingSpinner, Toast,
+  ProgressBar
+} from './components';
 
 interface ScrapeResult {
   id: string;
@@ -111,9 +120,9 @@ function App() {
       setStatus(`Success: ${result.message}. Pages found: ${result.pages_found}`);
       setStatusType('success');
       await listScrapedFiles();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Scrape Error:', error);
-      setStatus(`Network Error: ${error.message}`);
+      setStatus(`Network Error: ${error instanceof Error ? error.message : String(error)}`);
       setStatusType('error');
     } finally {
       setIsLoading(false);
@@ -138,7 +147,7 @@ function App() {
       } else {
         setScrapedFiles([]);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('List Files Error:', error);
       setScrapedFiles([]);
     }
@@ -171,11 +180,11 @@ function App() {
           content: { data: JSON.stringify(data, null, 2) }
         });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Load File Error:', error);
       setSelectedFile({
         filename,
-        content: { error: `Network Error loading file ${filename}: ${error.message}` }
+        content: { error: `Network Error loading file ${filename}: ${error instanceof Error ? error.message : String(error)}` }
       });
     }
   };
@@ -185,11 +194,23 @@ function App() {
   };
 
   return (
-    <div className={`min-h-screen transition-all duration-300 ${
+    <div className={`min-h-screen transition-all duration-500 animate-gradient-xy ${
       theme === 'dark' 
-        ? 'bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900' 
-        : 'bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50'
+        ? 'bg-gradient-to-br from-gray-900 via-purple-900/80 to-violet-900/60' 
+        : 'bg-gradient-to-br from-blue-50 via-indigo-50/80 to-purple-50/60'
     }`}>
+      {/* Animated Background Elements */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className={`absolute top-20 left-10 w-72 h-72 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-float ${
+          theme === 'dark' ? 'bg-purple-400' : 'bg-purple-300'
+        }`} style={{ animationDelay: '0s' }}></div>
+        <div className={`absolute top-40 right-20 w-72 h-72 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-float ${
+          theme === 'dark' ? 'bg-yellow-400' : 'bg-yellow-300'
+        }`} style={{ animationDelay: '2s' }}></div>
+        <div className={`absolute -bottom-8 left-20 w-72 h-72 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-float ${
+          theme === 'dark' ? 'bg-pink-400' : 'bg-pink-300'
+        }`} style={{ animationDelay: '4s' }}></div>
+      </div>
       {/* Header */}
       <header className={`backdrop-blur-md border-b transition-colors duration-300 ${
         theme === 'dark' 
@@ -234,6 +255,7 @@ function App() {
                     ? 'bg-white/10 hover:bg-white/20 text-white' 
                     : 'bg-black/10 hover:bg-black/20 text-gray-900'
                 }`}
+                title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
               >
                 {theme === 'dark' ? '☀️' : '🌙'}
               </button>
@@ -274,7 +296,7 @@ function App() {
           ].map(({ id, label, icon: Icon }) => (
             <button
               key={id}
-              onClick={() => setActiveTab(id as any)}
+              onClick={() => setActiveTab(id as 'scraper' | 'history' | 'settings')}
               className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-300 ${
                 activeTab === id
                   ? theme === 'dark'
@@ -295,189 +317,260 @@ function App() {
       <div className="container mx-auto px-6 pb-8">
         {/* Scraper Tab */}
         {activeTab === 'scraper' && (
-          <div className="space-y-6">
-            {/* Scrape New Content Section */}
-            <div className={`p-6 rounded-2xl backdrop-blur-md ${
-              theme === 'dark' ? 'bg-white/10' : 'bg-white/40'
-            }`}>
-              <h2 className={`text-xl font-semibold mb-4 ${
+          <div className="space-y-8 animate-fade-in-up">
+            {/* Hero Section */}
+            <Card variant="glass" className="p-8 text-center">
+              <div className="flex items-center justify-center mb-4">
+                <div className="p-3 bg-gradient-primary rounded-2xl">
+                  <Sparkles className="w-8 h-8 text-white animate-pulse" />
+                </div>
+              </div>
+              <h2 className={`text-3xl font-bold mb-2 text-shadow ${
                 theme === 'dark' ? 'text-white' : 'text-gray-900'
-              }`}>Scrape New Content</h2>
+              }`}>AI-Powered Documentation Extraction</h2>
+              <p className={`text-lg mb-6 ${
+                theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+              }`}>Transform any documentation site into structured, searchable content</p>
               
-              <div className="space-y-4">
+              {/* Quick Stats */}
+              <div className="grid grid-cols-3 gap-4 mb-6">
+                <div className="text-center">
+                  <div className={`text-2xl font-bold ${
+                    theme === 'dark' ? 'text-blue-400' : 'text-blue-600'
+                  }`}>⚡</div>
+                  <div className={`text-sm ${
+                    theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                  }`}>Lightning Fast</div>
+                </div>
+                <div className="text-center">
+                  <div className={`text-2xl font-bold ${
+                    theme === 'dark' ? 'text-green-400' : 'text-green-600'
+                  }`}>🎯</div>
+                  <div className={`text-sm ${
+                    theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                  }`}>Precise Extraction</div>
+                </div>
+                <div className="text-center">
+                  <div className={`text-2xl font-bold ${
+                    theme === 'dark' ? 'text-purple-400' : 'text-purple-600'
+                  }`}>🧠</div>
+                  <div className={`text-sm ${
+                    theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                  }`}>AI Enhanced</div>
+                </div>
+              </div>
+            </Card>
+
+            {/* Scraping Form */}
+            <Card variant="glass" className="p-6">
+              <div className="flex items-center mb-6">
+                <div className="p-2 bg-gradient-success rounded-lg mr-3">
+                  <Zap className="w-5 h-5 text-white" />
+                </div>
+                <h3 className={`text-xl font-semibold ${
+                  theme === 'dark' ? 'text-white' : 'text-gray-900'
+                }`}>Start New Extraction</h3>
+              </div>
+              
+              <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <input
-                    type="text"
+                  <InputField
+                    label="Documentation Website"
+                    type="url"
                     value={baseUrl}
                     onChange={(e) => setBaseUrl(e.target.value)}
-                    placeholder="Enter website URL (e.g., https://docs.agno.com/)"
-                    className={`px-4 py-3 rounded-xl backdrop-blur-md transition-all duration-300 ${
-                      theme === 'dark'
-                        ? 'bg-white/10 border border-white/20 text-white placeholder-gray-400 focus:bg-white/20 focus:border-blue-400'
-                        : 'bg-white/60 border border-black/20 text-gray-900 placeholder-gray-500 focus:bg-white/80 focus:border-blue-500'
-                    } focus:outline-none focus:ring-2 focus:ring-blue-500/50`}
+                    placeholder="https://docs.example.com"
+                    icon={Globe}
+                    className="animate-slide-in-left"
                   />
-                  <input
+                  <InputField
+                    label="Topic/Section"
                     type="text"
                     value={topic}
                     onChange={(e) => setTopic(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && scrapeUrl()}
-                    placeholder="Enter topic to learn (e.g., teams)"
-                    className={`px-4 py-3 rounded-xl backdrop-blur-md transition-all duration-300 ${
-                      theme === 'dark'
-                        ? 'bg-white/10 border border-white/20 text-white placeholder-gray-400 focus:bg-white/20 focus:border-blue-400'
-                        : 'bg-white/60 border border-black/20 text-gray-900 placeholder-gray-500 focus:bg-white/80 focus:border-blue-500'
-                    } focus:outline-none focus:ring-2 focus:ring-blue-500/50`}
+                    placeholder="getting-started"
+                    icon={Brain}
+                    className="animate-slide-in-right"
                   />
                 </div>
 
                 <div className="flex justify-center">
-                  <button
+                  <Button
                     onClick={scrapeUrl}
                     disabled={!baseUrl.trim() || !topic.trim() || isLoading || apiStatus !== 'online'}
-                    className="flex items-center space-x-2 px-8 py-3 bg-gradient-to-r from-green-500 to-blue-500 text-white rounded-xl hover:from-green-600 hover:to-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 font-medium shadow-lg"
+                    loading={isLoading}
+                    icon={isLoading ? undefined : Play}
+                    size="lg"
+                    className="shadow-glow hover:shadow-glow-hover"
                   >
-                    {isLoading ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        <span>Scraping...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Play className="w-4 h-4" />
-                        <span>Scrape</span>
-                      </>
-                    )}
-                  </button>
+                    {isLoading ? 'Extracting Documentation...' : 'Start Extraction'}
+                  </Button>
                 </div>
               </div>
+            </Card>
 
-              {/* Status Display */}
-              <div className={`mt-4 p-4 rounded-xl border ${
-                statusType === 'error' ? 'bg-red-500/20 border-red-500/30 text-red-500' :
-                statusType === 'success' ? 'bg-green-500/20 border-green-500/30 text-green-500' :
-                theme === 'dark' ? 'bg-white/10 border-white/20 text-gray-300' : 'bg-white/60 border-black/20 text-gray-700'
-              } min-h-[50px] whitespace-pre-wrap`}>
-                {status}
+            {/* Status Card */}
+            <Card variant={statusType === 'error' ? 'default' : statusType === 'success' ? 'default' : 'glass'} className={`p-4 animate-scale-in ${
+              statusType === 'error' ? 'border-red-500/50 bg-red-500/10' :
+              statusType === 'success' ? 'border-green-500/50 bg-green-500/10' : ''
+            }`}>
+              <div className="flex items-start space-x-3">
+                <div className="mt-0.5">
+                  {statusType === 'error' && <AlertCircle className="w-5 h-5 text-red-500" />}
+                  {statusType === 'success' && <CheckCircle className="w-5 h-5 text-green-500" />}
+                  {statusType === 'normal' && <Brain className="w-5 h-5 text-blue-500" />}
+                </div>
+                <div className="flex-1">
+                  <h4 className={`font-medium mb-1 ${
+                    statusType === 'error' ? 'text-red-600 dark:text-red-400' :
+                    statusType === 'success' ? 'text-green-600 dark:text-green-400' :
+                    theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
+                  }`}>
+                    {statusType === 'error' ? 'Extraction Error' :
+                     statusType === 'success' ? 'Extraction Complete' :
+                     'Status'}
+                  </h4>
+                  <p className={`text-sm whitespace-pre-wrap ${
+                    statusType === 'error' ? 'text-red-500 dark:text-red-300' :
+                    statusType === 'success' ? 'text-green-600 dark:text-green-400' :
+                    theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                  }`}>
+                    {status}
+                  </p>
+                </div>
               </div>
-            </div>
+            </Card>
           </div>
         )}
 
         {/* Files Tab */}
         {activeTab === 'history' && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-fade-in-up">
             {/* Available Files */}
-            <div className={`p-6 rounded-2xl backdrop-blur-md ${
-              theme === 'dark' ? 'bg-white/10' : 'bg-white/40'
-            }`}>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className={`text-xl font-semibold ${
-                  theme === 'dark' ? 'text-white' : 'text-gray-900'
-                }`}>Available Docs Material</h2>
-                <button
+            <Card variant="glass" className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center">
+                  <div className="p-2 bg-gradient-secondary rounded-lg mr-3">
+                    <Database className="w-5 h-5 text-white" />
+                  </div>
+                  <h2 className={`text-xl font-semibold ${
+                    theme === 'dark' ? 'text-white' : 'text-gray-900'
+                  }`}>Documentation Library</h2>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={listScrapedFiles}
-                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
-                    theme === 'dark'
-                      ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30'
-                      : 'bg-blue-500/20 text-blue-600 hover:bg-blue-500/30'
-                  }`}
+                  icon={RefreshCw}
+                  className="shrink-0"
                 >
-                  <RefreshCw className="w-4 h-4" />
-                  <span>Refresh</span>
-                </button>
+                  Refresh
+                </Button>
               </div>
 
               {scrapedFiles.length === 0 ? (
-                <div className="text-center py-12">
-                  <FileText className={`w-16 h-16 mx-auto mb-4 ${
-                    theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
-                  }`} />
-                  <p className={`text-lg ${
-                    theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
-                  }`}>No scraped files found</p>
-                  <p className={`text-sm ${
-                    theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
-                  }`}>Scrape some documentation to see files here</p>
-                </div>
+                <EmptyState
+                  icon={FileText}
+                  title="No documentation found"
+                  description="Start by extracting some documentation content"
+                  action={{
+                    label: "Go to Scraper",
+                    onClick: () => setActiveTab('scraper')
+                  }}
+                />
               ) : (
-                <div className="space-y-2 max-h-96 overflow-y-auto">
-                  {scrapedFiles.map((filename) => (
-                    <div
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {scrapedFiles.map((filename, index) => (
+                    <FileListItem
                       key={filename}
+                      filename={filename}
+                      isSelected={selectedFile?.filename === filename}
                       onClick={() => loadFileContent(filename)}
-                      className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                        selectedFile?.filename === filename
-                          ? theme === 'dark' ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-500/20 text-blue-600'
-                          : theme === 'dark' ? 'bg-white/10 hover:bg-white/15 text-gray-200' : 'bg-white/60 hover:bg-white/80 text-gray-700'
-                      }`}
-                    >
-                      <div className="flex items-center space-x-2">
-                        <FileText className="w-4 h-4" />
-                        <span className="text-sm font-medium truncate">{filename}</span>
-                      </div>
-                    </div>
+                      icon={FileText}
+                    />
                   ))}
                 </div>
               )}
-            </div>
+            </Card>
 
             {/* File Content */}
-            <div className={`p-6 rounded-2xl backdrop-blur-md ${
-              theme === 'dark' ? 'bg-white/10' : 'bg-white/40'
-            }`}>
-              <h2 className={`text-xl font-semibold mb-4 ${
-                theme === 'dark' ? 'text-white' : 'text-gray-900'
-              }`}>Documentation Content</h2>
+            <Card variant="glass" className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center">
+                  <div className="p-2 bg-gradient-primary rounded-lg mr-3">
+                    <Brain className="w-5 h-5 text-white" />
+                  </div>
+                  <h2 className={`text-xl font-semibold ${
+                    theme === 'dark' ? 'text-white' : 'text-gray-900'
+                  }`}>Content Viewer</h2>
+                </div>
+                {selectedFile && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    icon={Download}
+                    onClick={() => {
+                      const dataStr = JSON.stringify(selectedFile.content, null, 2);
+                      const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+                      const exportFileDefaultName = selectedFile.filename;
+                      const linkElement = document.createElement('a');
+                      linkElement.setAttribute('href', dataUri);
+                      linkElement.setAttribute('download', exportFileDefaultName);
+                      linkElement.click();
+                    }}
+                  >
+                    Export
+                  </Button>
+                )}
+              </div>
 
               {!selectedFile ? (
-                <div className="text-center py-12">
-                  <Database className={`w-16 h-16 mx-auto mb-4 ${
-                    theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
-                  }`} />
-                  <p className={`text-lg ${
-                    theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
-                  }`}>Select a file to view content</p>
-                  <p className={`text-sm ${
-                    theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
-                  }`}>Click on a file from the list to see its content</p>
-                </div>
+                <EmptyState
+                  icon={Database}
+                  title="Select a document"
+                  description="Choose a file from the library to view its content"
+                />
               ) : (
                 <div className="space-y-4 max-h-96 overflow-y-auto">
                   {Object.entries(selectedFile.content).map(([url, content]) => (
-                    <div
-                      key={url}
-                      className={`border-b pb-4 mb-4 ${
-                        theme === 'dark' ? 'border-white/20' : 'border-black/20'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <h3 className={`font-medium text-sm ${
-                          theme === 'dark' ? 'text-blue-400' : 'text-blue-600'
-                        }`}>
-                          Source URL: {url}
-                        </h3>
-                        <button
-                          onClick={() => copyToClipboard(url)}
-                          className={`p-1 rounded transition-colors ${
-                            theme === 'dark'
-                              ? 'hover:bg-white/10 text-gray-400'
-                              : 'hover:bg-black/10 text-gray-600'
-                          }`}
-                        >
-                          <Copy className="w-4 h-4" />
-                        </button>
+                    <Card key={url} variant="default" className="p-4 animate-scale-in">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center space-x-2">
+                          <ExternalLink className="w-4 h-4 text-blue-500" />
+                          <h3 className={`font-medium text-sm truncate ${
+                            theme === 'dark' ? 'text-blue-400' : 'text-blue-600'
+                          }`}>
+                            {url.replace(/https?:\/\//, '').substring(0, 50)}...
+                          </h3>
+                        </div>
+                        <div className="flex space-x-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            icon={ExternalLink}
+                            onClick={() => window.open(url, '_blank')}
+                          />
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            icon={Copy}
+                            onClick={() => copyToClipboard(url)}
+                          />
+                        </div>
                       </div>
-                      <pre className={`text-sm whitespace-pre-wrap break-words p-3 rounded-lg ${
-                        theme === 'dark' ? 'bg-black/20 text-gray-300' : 'bg-white/60 text-gray-700'
+                      <div className={`prose-custom text-sm whitespace-pre-wrap break-words p-4 rounded-lg border ${
+                        theme === 'dark' 
+                          ? 'bg-gray-800/50 border-gray-700 text-gray-300' 
+                          : 'bg-gray-50/50 border-gray-200 text-gray-700'
                       }`}>
                         {content}
-                      </pre>
-                    </div>
+                      </div>
+                    </Card>
                   ))}
                 </div>
               )}
-            </div>
+            </Card>
           </div>
         )}
 
@@ -536,11 +629,12 @@ function App() {
                     </div>
                     <button
                       onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                      className={`px-4 py-2 rounded-lg transition-colors ${
+                      className={`px-4 py-2 rounded-lg transition-colors duration-300 ${
                         theme === 'dark'
-                          ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30'
-                          : 'bg-blue-500/20 text-blue-600 hover:bg-blue-500/30'
+                          ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 active:scale-95'
+                          : 'bg-blue-500/20 text-blue-600 hover:bg-blue-500/30 active:scale-95'
                       }`}
+                      title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
                     >
                       {theme === 'dark' ? '🌙 Dark' : '☀️ Light'}
                     </button>

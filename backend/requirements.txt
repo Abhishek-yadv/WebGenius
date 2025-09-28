@@ -5,8 +5,11 @@ python-multipart==0.0.6
 playwright==1.40.0
 beautifulsoup4==4.12.2
 aiofiles==23.2.1
-anyio==4.0.0
+anyio==3.7.1
 sniffio==1.3.0
 typing-extensions==4.8.0
-# All dependencies explicitly listed to avoid missing imports
-# No Rust/C++ compilation packages - pure Python only
+httpx==0.25.0
+python-dotenv==1.0.0
+weasyprint==61.2
+html2text==2020.1.16
+lxml==5.2.2

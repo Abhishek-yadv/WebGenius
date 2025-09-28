@@ -1,33 +1,29 @@
-# WebScraper Pro
+# WebGen - Advanced Documentation Scraper
 
-A modern, full-stack web scraping application with a beautiful React frontend and powerful FastAPI backend.
+A modern, full-stack web application for scraping and processing documentation websites. Built with React + TypeScript frontend and FastAPI + Python backend.
 
-## Features
+![WebGen Demo](https://img.shields.io/badge/status-production%20ready-brightgreen)
+![License](https://img.shields.io/badge/license-MIT-blue)
+![Docker](https://img.shields.io/badge/docker-ready-blue)
 
-### Frontend (React + TypeScript)
-- 🎨 Modern glassmorphism design with dark/light themes
-- 📱 Fully responsive interface
-- 🔄 Real-time scraping progress tracking
-- 📊 Comprehensive results display with statistics
-- 💾 Export functionality (JSON, CSV, MD, PDF)
-- 📝 Persistent scraping history
-- ⚙️ Advanced scraping options and settings
-- 🌐 API health monitoring
+## ✨ Features
 
-### Backend (FastAPI + Python)
-- 🚀 High-performance async web scraping with Playwright
-- 🔧 Configurable extraction options
-- 📦 Documentation-focused scraping
-- 💾 Automatic result storage
-- 🛡️ Error handling and validation
-- 📚 Auto-generated API documentation
-- 🔄 CORS support for frontend integration
+- **Modern UI**: Responsive React interface with Tailwind CSS and dark mode
+- **Advanced Scraping**: Playwright-powered scraping with intelligent content extraction
+- **Smart Content Processing**: Extracts structured content from documentation sites
+- **Multiple Export Formats**: JSON and Markdown output
+- **Real-time Status**: Live scraping progress with WebSocket-like updates
+- **File Management**: Built-in file browser and content viewer
+- **Docker Ready**: Full containerization for easy deployment
+- **Production Ready**: Health checks, logging, and error handling
 
-## Quick Start
+## 🚀 Quick Start
 
-### Prerequisites
-- Node.js 16+ 
-- Python 3.8+
+### Option 1: Docker Deployment (Recommended)
+
+**Prerequisites:**
+- Docker and Docker Compose installed
+- 2GB+ available RAM
 
 ### Installation
 
