@@ -1,5 +1,6 @@
 import React from 'react';
-import { LucideIcon } from 'lucide-react';
+import { LucideIcon, FileText } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 
 // Loading Components
 export const LoadingSpinner: React.FC<{ size?: 'sm' | 'md' | 'lg'; className?: string }> = ({ 
@@ -446,7 +447,7 @@ interface ContentViewerProps {
 export const ContentViewer: React.FC<ContentViewerProps> = ({
   content,
   isMarkdown = false,
-  maxHeight = '400px',
+  maxHeight = '600px',
   showCopyButton = true,
   title
 }) => {
@@ -501,7 +502,7 @@ export const ContentViewer: React.FC<ContentViewerProps> = ({
         </div>
       )}
       <div 
-        className="overflow-y-auto p-4 rounded-lg border bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700"
+        className="overflow-y-auto p-6 rounded-lg border bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 custom-scrollbar"
         style={{ maxHeight }}
       >
         {isMarkdown ? (
@@ -516,6 +517,138 @@ export const ContentViewer: React.FC<ContentViewerProps> = ({
         )}
       </div>
     </div>
+  );
+};
+
+// Markdown Viewer Component
+interface MarkdownViewerProps {
+  content: string;
+  filename: string;
+  theme: 'light' | 'dark';
+}
+
+export const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
+  content,
+  filename,
+  theme
+}) => {
+  const [copied, setCopied] = React.useState(false);
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
+    }
+  };
+
+  const copySelection = () => {
+    const selection = window.getSelection();
+    if (selection && selection.toString().trim()) {
+      copyToClipboard(selection.toString());
+    }
+  };
+
+  return (
+    <Card variant="glass" className="p-6 h-full">
+      <div className="flex items-center justify-between mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center space-x-3">
+          <div className="p-2 bg-gradient-primary rounded-lg">
+            <FileText className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h3 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+              {filename}
+            </h3>
+            <p className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>
+              Full Markdown Content
+            </p>
+          </div>
+        </div>
+        <div className="flex space-x-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={copySelection}
+            className={`transition-colors ${copied ? 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20' : ''}`}
+            title="Copy selected text"
+          >
+            {copied ? '✓ Copied!' : '📋 Copy Selection'}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => copyToClipboard(content)}
+            title="Copy all content"
+          >
+            📄 Copy All
+          </Button>
+        </div>
+      </div>
+
+      <div className="overflow-y-auto max-h-[85vh] min-h-[600px] p-6 rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 custom-scrollbar">
+        <div className="prose prose-sm max-w-none dark:prose-invert">
+          <ReactMarkdown
+            components={{
+              h1: ({ children }) => (
+                <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-2 mt-6 first:mt-0">
+                  {children}
+                </h1>
+              ),
+              h2: ({ children }) => (
+                <h2 className="text-xl font-semibold mb-3 text-gray-800 dark:text-gray-200 mt-6">
+                  {children}
+                </h2>
+              ),
+              h3: ({ children }) => (
+                <h3 className="text-lg font-medium mb-2 text-gray-700 dark:text-gray-300 mt-4">
+                  {children}
+                </h3>
+              ),
+              code: ({ className, children, ...props }) => {
+                const match = /language-(\w+)/.exec(className || '');
+                return match ? (
+                  <pre className="mb-4 p-4 bg-gray-100 dark:bg-gray-800 rounded border overflow-x-auto">
+                    <code className={`${className} text-sm font-mono text-pink-600 dark:text-pink-400`} {...props}>
+                      {children}
+                    </code>
+                  </pre>
+                ) : (
+                  <code className="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded text-sm font-mono text-pink-600 dark:text-pink-400 border" {...props}>
+                    {children}
+                  </code>
+                );
+              },
+              blockquote: ({ children }) => (
+                <blockquote className="border-l-4 border-blue-500 pl-4 italic text-gray-600 dark:text-gray-400 my-4">
+                  {children}
+                </blockquote>
+              ),
+              a: ({ href, children }) => (
+                <a
+                  href={href}
+                  className="text-blue-600 dark:text-blue-400 hover:underline"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {children}
+                </a>
+              ),
+            }}
+          >
+            {content}
+          </ReactMarkdown>
+        </div>
+      </div>
+
+      <div className="mt-4 pt-3 border-t border-gray-200 dark:border-gray-700">
+        <p className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+          💡 Tip: Select any text and click "Copy Selection" to copy portions easily. Use "Copy All" for the entire content.
+        </p>
+      </div>
+    </Card>
   );
 };
 
@@ -536,7 +669,7 @@ export const FileContentItem: React.FC<FileContentItemProps> = ({
   onCopyContent
 }) => {
   const [viewMode, setViewMode] = React.useState<'formatted' | 'raw'>('formatted');
-  const [isExpanded, setIsExpanded] = React.useState(false);
+  const [isExpanded, setIsExpanded] = React.useState(true); // Default to expanded
   const [copied, setCopied] = React.useState<{ url: boolean; content: boolean }>({ url: false, content: false });
   
   const isMarkdown = content.includes('#') || content.includes('**') || content.includes('- ');
@@ -631,7 +764,7 @@ export const FileContentItem: React.FC<FileContentItemProps> = ({
         <ContentViewer
           content={shouldTruncate && !isExpanded ? truncatedContent + '\n\n...' : content}
           isMarkdown={viewMode === 'formatted' && isMarkdown}
-          maxHeight="400px"
+          maxHeight="600px"
           showCopyButton={false}
         />
       </div>

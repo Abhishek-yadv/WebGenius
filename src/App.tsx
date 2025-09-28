@@ -6,13 +6,13 @@ import {
 } from 'lucide-react';
 import { API_BASE_URL } from './config';
 import {
-  Button, Card, InputField, 
-  EmptyState, FileListItem, FileContentItem
+  Button, Card, InputField,
+  EmptyState, FileListItem, FileContentItem, MarkdownViewer
 } from './components';
 
 interface ScrapedFile {
   filename: string;
-  content: Record<string, string>;
+  content: Record<string, string> | string;
 }
 
 function App() {
@@ -126,7 +126,11 @@ function App() {
 
       const result = await response.json();
       if (result.files && result.files.length > 0) {
-        setScrapedFiles(result.files);
+        // Extract just the filename from each file object
+        const filenames = result.files.map((file: any) => 
+          typeof file === 'string' ? file : file.filename
+        );
+        setScrapedFiles(filenames);
       } else {
         setScrapedFiles([]);
       }
@@ -152,7 +156,13 @@ function App() {
       }
 
       const data = await response.json();
-      if (typeof data === 'object' && data !== null) {
+      if (filename.endsWith('.md')) {
+        // For markdown files, extract the content string
+        setSelectedFile({
+          filename,
+          content: typeof data === 'string' ? data : data.content || JSON.stringify(data, null, 2)
+        });
+      } else if (typeof data === 'object' && data !== null) {
         setSelectedFile({
           filename,
           content: data
@@ -463,7 +473,7 @@ function App() {
                   }}
                 />
               ) : (
-                <div className="space-y-3 max-h-96 overflow-y-auto">
+                <div className="space-y-3 max-h-[600px] overflow-y-auto custom-scrollbar">
                   {scrapedFiles.map((filename) => (
                     <FileListItem
                       key={filename}
@@ -514,18 +524,32 @@ function App() {
                   title="Select a document"
                   description="Choose a file from the library to view its content"
                 />
+              ) : selectedFile.filename.endsWith('.md') ? (
+                <MarkdownViewer
+                  content={typeof selectedFile.content === 'string' ? selectedFile.content : JSON.stringify(selectedFile.content, null, 2)}
+                  filename={selectedFile.filename}
+                  theme={theme}
+                />
               ) : (
-                <div className="space-y-4 max-h-96 overflow-y-auto">
-                  {Object.entries(selectedFile.content).map(([url, content]) => (
-                    <FileContentItem
-                      key={url}
-                      url={url}
-                      content={typeof content === 'string' ? content : JSON.stringify(content, null, 2)}
-                      theme={theme}
-                      onCopyUrl={copyToClipboard}
-                      onCopyContent={copyToClipboard}
-                    />
-                  ))}
+                <div className="space-y-4 max-h-[800px] overflow-y-auto custom-scrollbar">
+                  {typeof selectedFile.content === 'string' ? (
+                    <div className="p-4 bg-gray-100 dark:bg-gray-800 rounded-lg">
+                      <pre className="whitespace-pre-wrap text-sm text-gray-800 dark:text-gray-200">
+                        {selectedFile.content}
+                      </pre>
+                    </div>
+                  ) : (
+                    Object.entries(selectedFile.content).map(([url, content]) => (
+                      <FileContentItem
+                        key={url}
+                        url={url}
+                        content={typeof content === 'string' ? content : JSON.stringify(content, null, 2)}
+                        theme={theme}
+                        onCopyUrl={copyToClipboard}
+                        onCopyContent={copyToClipboard}
+                      />
+                    ))
+                  )}
                 </div>
               )}
             </Card>
