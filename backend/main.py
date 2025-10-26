@@ -97,12 +97,12 @@ async def extract_links_from_section(page, section_url, section_prefix):
     
     logger.info(f"Navigating to section: {section_url}")
     try:
-        # Increased timeout to 30s for production environments
-        await page.goto(section_url, timeout=30000, wait_until="domcontentloaded")
+        # Wait for network to be idle to allow JS-heavy sites to load
+        await page.goto(section_url, timeout=45000, wait_until="networkidle")
         
-        # Wait for common documentation containers (reduced timeout)
+        # Wait for common documentation containers
         try:
-            await page.wait_for_selector('article, main, .content, #content', timeout=2000)
+            await page.wait_for_selector('article, main, .content, #content', timeout=5000)
         except:
             logger.debug("No common content containers found, proceeding anyway")
         
@@ -177,12 +177,12 @@ async def extract_content_from_page(page, url):
     """Extract and convert page content to markdown with improved parsing"""
     try:
         logger.info(f"Extracting content from: {url}")
-        # Increased timeout to 30s for production environments with slower network
-        await page.goto(url, timeout=30000, wait_until="domcontentloaded")
+        # Wait for network idle to ensure JS-rendered content is loaded
+        await page.goto(url, timeout=45000, wait_until="networkidle")
         
-        # Wait for content to load (reduced timeout)
+        # Wait for content to load
         try:
-            await page.wait_for_selector('article, main, .content, #content, .documentation-content, .markdown-body', timeout=2000)
+            await page.wait_for_selector('article, main, .content, #content, .documentation-content, .markdown-body', timeout=5000)
         except:
             logger.debug(f"No specific content container found for {url}, using body")
 
