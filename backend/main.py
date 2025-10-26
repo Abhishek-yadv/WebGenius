@@ -681,12 +681,27 @@ async def extract_content_from_page(page, url):
         content = '\n\n'.join(unique_paragraphs)
         
         # Additional line-by-line deduplication for remaining duplicates
+        # BUT preserve code blocks completely (no deduplication inside them)
         lines = content.split('\n')
         seen_line_hashes = set()
         unique_lines = []
+        in_code_block = False
         
         for line in lines:
             stripped = line.strip()
+            
+            # Track if we're inside a code block
+            if stripped.startswith('```'):
+                in_code_block = not in_code_block
+                unique_lines.append(line)
+                continue
+            
+            # Inside code blocks: keep everything as-is, no deduplication
+            if in_code_block:
+                unique_lines.append(line)
+                continue
+            
+            # Outside code blocks: apply deduplication
             if stripped:  # Non-empty line
                 # Create hash for comparison
                 line_hash = hash(stripped.lower())
