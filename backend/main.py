@@ -91,6 +91,10 @@ os.makedirs("scraped_data", exist_ok=True)
 
 async def extract_links_from_section(page, section_url, section_prefix):
     """Extract all documentation links from a section page"""
+    # Normalize section_url by removing fragment if present
+    parsed_section = urlparse(section_url)
+    section_url = parsed_section._replace(fragment='').geturl()
+    
     logger.info(f"Navigating to section: {section_url}")
     try:
         # ⚡ OPTIMIZED: Fast loading - domcontentloaded instead of networkidle
@@ -144,16 +148,24 @@ async def extract_links_from_section(page, section_url, section_prefix):
         if not href:
             continue
         
+        # Skip anchor links that only have fragments (like #section)
+        if href.startswith('#'):
+            continue
+        
         full_url = urljoin(section_url, href)
         parsed_url = urlparse(full_url)
+        
+        # Remove fragment (anchor) from URL to avoid duplicates
+        # e.g., https://docs.agno.com/page#section becomes https://docs.agno.com/page
+        url_without_fragment = parsed_url._replace(fragment='').geturl()
         
         # More flexible filter: same domain, part of the same doc section, and not yet seen
         if (parsed_url.netloc == base_domain and
             parsed_url.path.startswith(f"/{section_prefix}") and
-            full_url not in seen and
-            not full_url.endswith(('.pdf', '.zip', '.png', '.jpg', '.jpeg', '.gif'))):  # Skip non-HTML resources
-            links.append(full_url)
-            seen.add(full_url)
+            url_without_fragment not in seen and
+            not url_without_fragment.endswith(('.pdf', '.zip', '.png', '.jpg', '.jpeg', '.gif'))):  # Skip non-HTML resources
+            links.append(url_without_fragment)
+            seen.add(url_without_fragment)
     
     logger.info(f"Found {len(links)} unique links in section {section_prefix}")
     
