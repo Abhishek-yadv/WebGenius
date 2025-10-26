@@ -97,8 +97,8 @@ async def extract_links_from_section(page, section_url, section_prefix):
     
     logger.info(f"Navigating to section: {section_url}")
     try:
-        # ⚡ OPTIMIZED: Fast loading - domcontentloaded instead of networkidle
-        await page.goto(section_url, timeout=15000, wait_until="domcontentloaded")
+        # Increased timeout to 30s for production environments
+        await page.goto(section_url, timeout=30000, wait_until="domcontentloaded")
         
         # Wait for common documentation containers (reduced timeout)
         try:
@@ -177,8 +177,8 @@ async def extract_content_from_page(page, url):
     """Extract and convert page content to markdown with improved parsing"""
     try:
         logger.info(f"Extracting content from: {url}")
-        # ⚡ OPTIMIZED: Fast loading - domcontentloaded, 10s timeout
-        await page.goto(url, timeout=10000, wait_until="domcontentloaded")
+        # Increased timeout to 30s for production environments with slower network
+        await page.goto(url, timeout=30000, wait_until="domcontentloaded")
         
         # Wait for content to load (reduced timeout)
         try:
