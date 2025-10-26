@@ -121,12 +121,24 @@ async def extract_links_from_section(page, section_url, section_prefix):
     ]
     
     all_hrefs = set()
-    for selector in selectors:
-        elements = await page.query_selector_all(selector)
-        for element in elements:
-            href = await element.get_attribute('href')
-            if href:
-                all_hrefs.add(href)
+    # Use page.evaluate to extract hrefs directly, avoiding element handle issues
+    try:
+        for selector in selectors:
+            try:
+                hrefs = await page.evaluate('''
+                    (selector) => {
+                        const elements = document.querySelectorAll(selector);
+                        return Array.from(elements).map(el => el.getAttribute('href')).filter(href => href);
+                    }
+                ''', selector)
+                all_hrefs.update(hrefs)
+            except Exception as e:
+                logger.debug(f"Error with selector {selector}: {e}")
+                continue
+    except Exception as e:
+        logger.warning(f"Error extracting links: {e}")
+        # Fallback: try to get at least some links
+        return [section_url]
     
     for href in all_hrefs:
         if not href:
@@ -725,12 +737,13 @@ async def scrape_section(base_url, section):
     ))
 
     try:
-        page = await context.new_page()
-        
         # Extract links from the section
-        links = await extract_links_from_section(page, section_url, section)
-        logger.info(f"Found {len(links)} page(s) under section /{section}")
-        await page.close()
+        page = await context.new_page()
+        try:
+            links = await extract_links_from_section(page, section_url, section)
+            logger.info(f"Found {len(links)} page(s) under section /{section}")
+        finally:
+            await page.close()
 
         if not links:
             links = [section_url]  # Fallback to scraping just the entry page
