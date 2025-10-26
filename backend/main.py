@@ -252,6 +252,7 @@ async def extract_content_from_page(page, url):
         # Process content with improved parsing
         text_parts = [f"# {title_text}"]
         processed_elements: Set[int] = set()
+        seen_content: Set[str] = set()  # Track unique content to prevent duplicates
 
         def process_inline_elements(element):
             """Process inline elements within a parent element"""
@@ -264,6 +265,10 @@ async def extract_content_from_page(page, url):
                     if text:
                         result.append(text)
                 elif hasattr(child, 'name'):
+                    # Skip block-level elements that should be processed separately
+                    if child.name in ['ul', 'ol', 'table', 'pre', 'blockquote', 'div', 'section', 'article']:
+                        continue
+                    # Skip already processed elements (but allow re-reading for inline context)
                     if child.name in ["strong", "b"]:
                         inner_content = process_inline_elements(child)
                         if not inner_content:
@@ -317,12 +322,14 @@ async def extract_content_from_page(page, url):
             """Process an element and return its markdown representation"""
             if id(el) in processed_elements:
                 return None
-            processed_elements.add(id(el))
             
             # Skip if element has no text (but be careful with elements that might have children)
             element_text = el.get_text(strip=True)
             if not element_text:
                 return None
+            
+            # Mark as processed early to prevent reprocessing
+            processed_elements.add(id(el))
             
             # Handle different element types
             if el.name == "h1":
@@ -368,12 +375,14 @@ async def extract_content_from_page(page, url):
                 blockquote_parts = []
                 for child in el.children:
                     if hasattr(child, 'name'):
-                        child_result = process_element(child, parent_processed=True, depth=depth)
-                        if child_result:
-                            # Add > prefix to each line of the child result
-                            for line in child_result.split('\n'):
-                                if line.strip():
-                                    blockquote_parts.append(f"> {line}")
+                        # Skip if already processed
+                        if id(child) not in processed_elements:
+                            child_result = process_element(child, parent_processed=True, depth=depth)
+                            if child_result:
+                                # Add > prefix to each line of the child result
+                                for line in child_result.split('\n'):
+                                    if line.strip():
+                                        blockquote_parts.append(f"> {line}")
                     elif isinstance(child, NavigableString):
                         text = str(child).strip()
                         if text:
@@ -438,9 +447,11 @@ async def extract_content_from_page(page, url):
                 
                 for child in el.children:
                     if hasattr(child, 'name'):
-                        result = process_element(child, depth=depth)
-                        if result:
-                            results.append(result)
+                        # Skip if already processed
+                        if id(child) not in processed_elements:
+                            result = process_element(child, depth=depth)
+                            if result:
+                                results.append(result)
                     elif isinstance(child, NavigableString):
                         text = str(child).strip()
                         if text and len(text) > 1:  # Skip single character strings
@@ -456,9 +467,11 @@ async def extract_content_from_page(page, url):
                     content = f"\n<details>\n<summary>{summary.get_text(strip=True)}</summary>\n\n"
                     for child in el.children:
                         if hasattr(child, 'name') and child.name != "summary":
-                            result = process_element(child, depth=depth)
-                            if result:
-                                content += result
+                            # Skip if already processed
+                            if id(child) not in processed_elements:
+                                result = process_element(child, depth=depth)
+                                if result:
+                                    content += result
                     content += "\n</details>\n"
                     return content
             else:
@@ -471,18 +484,29 @@ async def extract_content_from_page(page, url):
 
         def process_list(ul_ol, ordered=False, depth=0):
             """Process ul/ol lists"""
+            # Mark the list itself as processed
+            if id(ul_ol) in processed_elements:
+                return ""
+            processed_elements.add(id(ul_ol))
+            
             items = []
             counter = 1
             for li in ul_ol.find_all("li", recursive=False):
+                # Skip if already processed
+                if id(li) in processed_elements:
+                    continue
+                processed_elements.add(id(li))
+                
                 # Process the list item content using process_inline_elements
                 li_content = process_inline_elements(li)
                 
                 # Also check for nested lists
                 nested_lists = []
                 for child in li.find_all(["ul", "ol"], recursive=False):
-                    nested = process_list(child, ordered=(child.name == "ol"), depth=depth+1)
-                    if nested:
-                        nested_lists.append(nested)
+                    if id(child) not in processed_elements:
+                        nested = process_list(child, ordered=(child.name == "ol"), depth=depth+1)
+                        if nested:
+                            nested_lists.append(nested)
                 
                 if li_content or nested_lists:
                     indent = "  " * depth
@@ -500,6 +524,11 @@ async def extract_content_from_page(page, url):
 
         def process_table(table):
             """Process HTML tables to markdown"""
+            # Mark the table as processed to prevent duplicates
+            if id(table) in processed_elements:
+                return ""
+            processed_elements.add(id(table))
+            
             rows = []
             headers = []
             
@@ -540,23 +569,37 @@ async def extract_content_from_page(page, url):
 
         def process_definition_list(dl):
             """Process definition lists"""
+            # Mark the definition list as processed
+            if id(dl) in processed_elements:
+                return ""
+            processed_elements.add(id(dl))
+            
             result = []
             for child in dl.children:
                 if hasattr(child, 'name'):
-                    if child.name == "dt":
-                        content = process_inline_elements(child)
-                        result.append(f"\n**{content or child.get_text(strip=True)}**")
-                    elif child.name == "dd":
-                        content = process_inline_elements(child)
-                        result.append(f": {content or child.get_text(strip=True)}")
+                    if id(child) not in processed_elements:
+                        processed_elements.add(id(child))
+                        if child.name == "dt":
+                            content = process_inline_elements(child)
+                            result.append(f"\n**{content or child.get_text(strip=True)}**")
+                        elif child.name == "dd":
+                            content = process_inline_elements(child)
+                            result.append(f": {content or child.get_text(strip=True)}")
             return "\n".join(result) + "\n" if result else ""
 
         # Process only direct children of main content to avoid duplicates
         for element in main_content.children:
             if hasattr(element, 'name') and element.name:
-                result = process_element(element)
-                if result and result.strip():
-                    text_parts.append(result)
+                # Skip if already processed
+                if id(element) not in processed_elements:
+                    result = process_element(element)
+                    if result and result.strip():
+                        # Create a normalized version for duplicate detection
+                        normalized = result.strip().lower()
+                        # Only add if we haven't seen this exact content before
+                        if normalized not in seen_content:
+                            text_parts.append(result)
+                            seen_content.add(normalized)
 
         # Join and clean up the output
         content = "\n".join(text_parts)
@@ -571,6 +614,7 @@ async def extract_content_from_page(page, url):
         lines = content.split('\n')
         cleaned_lines = []
         prev_line = None
+        seen_lines = set()
         
         for line in lines:
             stripped_line = line.strip()
@@ -587,11 +631,50 @@ async def extract_content_from_page(page, url):
         # Remove repetitive patterns in code blocks
         content = re.sub(r'(```[\s\S]*?)\n(\1)', r'\1', content)
         
-        # Clean up repetitive markdown patterns
+        # Clean up repetitive markdown patterns (headings, links)
         content = re.sub(r'(#+\s+[^\n]+)\n+\1', r'\1', content)
         
         # Remove repetitive link patterns
         content = re.sub(r'(\[[^\]]+\]\([^)]+\))\s+\1', r'\1', content)
+        
+        # Remove duplicate paragraphs (more aggressive deduplication)
+        paragraphs = content.split('\n\n')
+        unique_paragraphs = []
+        seen_paragraph_hashes = set()
+        
+        for paragraph in paragraphs:
+            # Normalize the paragraph for comparison
+            normalized_para = paragraph.strip().lower()
+            # Create a simple hash to detect duplicates
+            para_hash = hash(normalized_para)
+            
+            # Only add if we haven't seen this paragraph before
+            if para_hash not in seen_paragraph_hashes and normalized_para:
+                unique_paragraphs.append(paragraph)
+                seen_paragraph_hashes.add(para_hash)
+        
+        content = '\n\n'.join(unique_paragraphs)
+        
+        # Additional line-by-line deduplication for remaining duplicates
+        lines = content.split('\n')
+        seen_line_hashes = set()
+        unique_lines = []
+        
+        for line in lines:
+            stripped = line.strip()
+            if stripped:  # Non-empty line
+                # Create hash for comparison
+                line_hash = hash(stripped.lower())
+                # Skip if we've seen this exact line before (unless it's a very short line like markdown list marker)
+                if line_hash not in seen_line_hashes or len(stripped) < 3:
+                    unique_lines.append(line)
+                    seen_line_hashes.add(line_hash)
+            else:  # Empty line - always keep for formatting
+                # But avoid multiple consecutive empty lines
+                if unique_lines and unique_lines[-1].strip():
+                    unique_lines.append(line)
+        
+        content = '\n'.join(unique_lines)
         
         # Log extraction success
         logger.info(f"Successfully extracted {len(content)} characters from {url}")
