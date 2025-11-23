@@ -220,7 +220,7 @@ function App() {
                         <Sparkles className="w-4 h-4 text-emerald-400 absolute -top-1 -right-1 animate-pulse" />
                     </div>
                     <div>
-                        <h1 className="text-2xl font-bold gradient-text">DocuMind AI</h1>
+                        <h1 className="text-2xl font-bold gradient-text">WebGenius</h1>
                         <p className="text-xs text-blue-300">Extract. Transform. Discover.</p>
                     </div>
                 </div>
@@ -392,16 +392,16 @@ function App() {
                             </div>
 
                             <div className={`flex items-center gap-3 py-3 px-4 rounded-xl border ${statusType === 'error' ? 'bg-red-900/20 border-red-500/20' :
-                                    statusType === 'success' ? 'bg-emerald-900/20 border-emerald-500/20' :
-                                        'bg-slate-900/50 border-blue-500/20'
+                                statusType === 'success' ? 'bg-emerald-900/20 border-emerald-500/20' :
+                                    'bg-slate-900/50 border-blue-500/20'
                                 }`}>
                                 <div className={`w-2 h-2 rounded-full animate-pulse ${statusType === 'error' ? 'bg-red-400' :
-                                        statusType === 'success' ? 'bg-emerald-400' :
-                                            'bg-blue-400/50'
+                                    statusType === 'success' ? 'bg-emerald-400' :
+                                        'bg-blue-400/50'
                                     }`} />
                                 <p className={`${statusType === 'error' ? 'text-red-300' :
-                                        statusType === 'success' ? 'text-emerald-300' :
-                                            'text-blue-300/70'
+                                    statusType === 'success' ? 'text-emerald-300' :
+                                        'text-blue-300/70'
                                     }`}>{status}</p>
                             </div>
                         </div>
@@ -532,8 +532,8 @@ function App() {
                                             <p className="text-sm text-blue-300">{API_BASE_URL}</p>
                                         </div>
                                         <div className={`px-3 py-1 rounded-full text-xs font-medium ${apiStatus === 'online' ? 'bg-emerald-500/20 text-emerald-400' :
-                                                apiStatus === 'offline' ? 'bg-red-500/20 text-red-400' :
-                                                    'bg-yellow-500/20 text-yellow-400'
+                                            apiStatus === 'offline' ? 'bg-red-500/20 text-red-400' :
+                                                'bg-yellow-500/20 text-yellow-400'
                                             }`}>
                                             {apiStatus}
                                         </div>
@@ -545,7 +545,7 @@ function App() {
                                 <h3 className="text-lg font-medium mb-4 text-blue-200">About</h3>
                                 <div className="glass border border-blue-400/20 rounded-xl p-4">
                                     <p className="text-sm text-blue-300">
-                                        DocuMind AI - Advanced documentation scraping tool with AI-powered content extraction.
+                                        WebGenius - Advanced documentation scraping tool with AI-powered content extraction.
                                         Built with React, TypeScript, and FastAPI.
                                     </p>
                                 </div>
