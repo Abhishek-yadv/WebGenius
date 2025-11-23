@@ -297,3 +297,44 @@
   transition-duration: 200ms;
   transition-timing-function: ease-in-out;
 }
+
+
+/* DocuMindAI Custom Animations */
+@keyframes float {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(30px, -30px); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -1000px 0; }
+  100% { background-position: 1000px 0; }
+}
+
+@keyframes gradientShift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* DocuMindAI Utility Classes */
+.gradient-text {
+  background: linear-gradient(90deg, #3b82f6, #10b981, #06b6d4, #3b82f6);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: gradientShift 3s ease infinite;
+}
+
+.glass {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  /* Border removed - Tailwind will handle borders */
+}
+
+.bg-size-200 {
+  background-size: 200%;
+}
+
+.bg-pos-100 {
+  background-position: 100%;
+}

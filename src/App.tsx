@@ -1,650 +1,561 @@
 import { useState, useEffect } from 'react';
-import { 
-  Globe, Search, History, Settings, FileText, Database, Play, 
-  CheckCircle, AlertCircle, Server, RefreshCw, Sparkles,
-  Zap, Brain, Download
+import {
+    Globe, Settings, FileText, Database,
+    CheckCircle, AlertCircle, RefreshCw, Sparkles,
+    Zap, Brain, Download, BookOpen, Target
 } from 'lucide-react';
 import { API_BASE_URL } from './config';
 import {
-  Button, Card, InputField,
-  EmptyState, FileListItem, FileContentItem, MarkdownViewer
+    EmptyState, FileListItem, FileContentItem, MarkdownViewer
 } from './components';
 
 interface ScrapedFile {
-  filename: string;
-  content: Record<string, string> | string;
+    filename: string;
+    content: Record<string, string> | string;
 }
 
 function App() {
-  const [baseUrl, setBaseUrl] = useState('');
-  const [topic, setTopic] = useState('');
-  const [status, setStatus] = useState('Scraping status will appear here.');
-  const [statusType, setStatusType] = useState<'normal' | 'error' | 'success'>('normal');
-  const [scrapedFiles, setScrapedFiles] = useState<string[]>([]);
-  const [selectedFile, setSelectedFile] = useState<ScrapedFile | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'scraper' | 'history' | 'settings'>('scraper');
-  const [theme, setTheme] = useState<'light' | 'dark'>('dark');
-  const [apiStatus, setApiStatus] = useState<'checking' | 'online' | 'offline'>('checking');
+    const [baseUrl, setBaseUrl] = useState('');
+    const [topic, setTopic] = useState('');
+    const [status, setStatus] = useState('Scraping status will appear here.');
+    const [statusType, setStatusType] = useState<'normal' | 'error' | 'success'>('normal');
+    const [scrapedFiles, setScrapedFiles] = useState<string[]>([]);
+    const [selectedFile, setSelectedFile] = useState<ScrapedFile | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
+    const [activeTab, setActiveTab] = useState<'scraper' | 'history' | 'settings'>('scraper');
+    const [theme, setTheme] = useState<'light' | 'dark'>('dark');
+    const [apiStatus, setApiStatus] = useState<'checking' | 'online' | 'offline'>('checking');
+    const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+    const [urlFocused, setUrlFocused] = useState(false);
+    const [topicFocused, setTopicFocused] = useState(false);
 
-  // Check API health on mount
-  useEffect(() => {
-    checkApiHealth();
-    const interval = setInterval(checkApiHealth, 30000);
-    return () => clearInterval(interval);
-  }, []);
+    // Mouse tracking
+    useEffect(() => {
+        const handleMouseMove = (e: MouseEvent) => {
+            setMousePosition({ x: e.clientX, y: e.clientY });
+        };
+        window.addEventListener('mousemove', handleMouseMove);
+        return () => window.removeEventListener('mousemove', handleMouseMove);
+    }, []);
 
-  // Load saved theme
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('theme') as 'light' | 'dark';
-    if (savedTheme) {
-      setTheme(savedTheme);
-    }
-    listScrapedFiles();
-  }, []);
+    // API health check
+    useEffect(() => {
+        checkApiHealth();
+        const interval = setInterval(checkApiHealth, 30000);
+        return () => clearInterval(interval);
+    }, []);
 
-  // Theme toggle
-  useEffect(() => {
-    localStorage.setItem('theme', theme);
-    document.documentElement.className = theme;
-  }, [theme]);
+    // Load theme and files
+    useEffect(() => {
+        const savedTheme = localStorage.getItem('theme') as 'light' | 'dark';
+        if (savedTheme) {
+            setTheme(savedTheme);
+        }
+        listScrapedFiles();
+    }, []);
 
-  const checkApiHealth = async () => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/health`);
-      if (response.ok) {
-        setApiStatus('online');
-      } else {
-        setApiStatus('offline');
-      }
-    } catch (error) {
-      setApiStatus('offline');
-    }
-  };
+    useEffect(() => {
+        localStorage.setItem('theme', theme);
+        document.documentElement.className = theme;
+    }, [theme]);
 
-  const scrapeUrl = async () => {
-    if (!baseUrl.trim() || !topic.trim()) {
-      setStatus('Please enter both a website URL and a topic.');
-      setStatusType('error');
-      return;
-    }
+    const checkApiHealth = async () => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/health`);
+            if (response.ok) {
+                setApiStatus('online');
+            } else {
+                setApiStatus('offline');
+            }
+        } catch (error) {
+            setApiStatus('offline');
+        }
+    };
 
-    if (apiStatus !== 'online') {
-      setStatus('Backend API is offline. Please check the connection.');
-      setStatusType('error');
-      return;
-    }
+    const scrapeUrl = async () => {
+        if (!baseUrl.trim() || !topic.trim()) {
+            setStatus('Please enter both a website URL and a topic.');
+            setStatusType('error');
+            return;
+        }
 
-    setIsLoading(true);
-    setStatus('Starting scrape...');
-    setStatusType('normal');
+        if (apiStatus !== 'online') {
+            setStatus('Backend API is offline. Please check the connection.');
+            setStatusType('error');
+            return;
+        }
 
-    const fullUrl = `${baseUrl.replace(/\/+$/, '')}/${topic.replace(/^\/+|\/+$/g, '')}/`;
-    console.log('Constructed URL:', fullUrl);
+        setIsLoading(true);
+        setStatus('Starting scrape...');
+        setStatusType('normal');
 
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/scrape`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: fullUrl })
-      });
+        const fullUrl = `${baseUrl.replace(/\/+$/, '')}/${topic.replace(/^\/+|\/+$/g, '')}/`;
+        console.log('Constructed URL:', fullUrl);
 
-      console.log('Scrape Response Status:', response.status, response.statusText);
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/scrape`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url: fullUrl })
+            });
 
-      if (!response.ok) {
-        const text = await response.text();
-        console.log('Scrape Response Body:', text.slice(0, 200));
-        setStatus(`Error: HTTP ${response.status} - ${text.slice(0, 100) || response.statusText}`);
-        setStatusType('error');
-        return;
-      }
+            console.log('Scrape Response Status:', response.status, response.statusText);
 
-      const result = await response.json();
-      setStatus(`Success: ${result.message}. Pages found: ${result.pages_found}`);
-      setStatusType('success');
-      await listScrapedFiles();
-    } catch (error: unknown) {
-      console.error('Scrape Error:', error);
-      setStatus(`Network Error: ${error instanceof Error ? error.message : String(error)}`);
-      setStatusType('error');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+            if (!response.ok) {
+                const text = await response.text();
+                console.log('Scrape Response Body:', text.slice(0, 200));
+                setStatus(`Error: HTTP ${response.status} - ${text.slice(0, 100) || response.statusText}`);
+                setStatusType('error');
+                return;
+            }
 
-  const listScrapedFiles = async () => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/list-scraped-data`);
-      console.log('List Files Response Status:', response.status, response.statusText);
+            const result = await response.json();
+            setStatus(`Success: ${result.message}. Pages found: ${result.pages_found}`);
+            setStatusType('success');
+            await listScrapedFiles();
+        } catch (error: unknown) {
+            console.error('Scrape Error:', error);
+            setStatus(`Network Error: ${error instanceof Error ? error.message : String(error)}`);
+            setStatusType('error');
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
-      if (!response.ok) {
-        const text = await response.text();
-        console.log('List Files Response Body:', text.slice(0, 200));
-        setScrapedFiles([]);
-        return;
-      }
+    const listScrapedFiles = async () => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/list-scraped-data`);
+            console.log('List Files Response Status:', response.status, response.statusText);
 
-      const result = await response.json();
-      if (result.files && result.files.length > 0) {
-        // Extract just the filename from each file object
-        const filenames = result.files.map((file: any) => 
-          typeof file === 'string' ? file : file.filename
-        );
-        setScrapedFiles(filenames);
-      } else {
-        setScrapedFiles([]);
-      }
-    } catch (error: unknown) {
-      console.error('List Files Error:', error);
-      setScrapedFiles([]);
-    }
-  };
+            if (!response.ok) {
+                const text = await response.text();
+                console.log('List Files Response Body:', text.slice(0, 200));
+                setScrapedFiles([]);
+                return;
+            }
 
-  const loadFileContent = async (filename: string) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/get-scraped-data/${filename}`);
-      console.log('Load File Response Status:', response.status, response.statusText);
+            const result = await response.json();
+            if (result.files && result.files.length > 0) {
+                const filenames = result.files.map((file: any) =>
+                    typeof file === 'string' ? file : file.filename
+                );
+                setScrapedFiles(filenames);
+            } else {
+                setScrapedFiles([]);
+            }
+        } catch (error: unknown) {
+            console.error('List Files Error:', error);
+            setScrapedFiles([]);
+        }
+    };
 
-      if (!response.ok) {
-        const text = await response.text();
-        console.log('Load File Response Body:', text.slice(0, 200));
-        setSelectedFile({
-          filename,
-          content: { error: `Error loading file ${filename}: HTTP ${response.status} - ${text.slice(0, 100) || response.statusText}` }
-        });
-        return;
-      }
+    const loadFileContent = async (filename: string) => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/get-scraped-data/${filename}`);
+            console.log('Load File Response Status:', response.status, response.statusText);
 
-      const data = await response.json();
-      if (filename.endsWith('.md')) {
-        // For markdown files, extract the content string
-        setSelectedFile({
-          filename,
-          content: typeof data === 'string' ? data : data.content || JSON.stringify(data, null, 2)
-        });
-      } else if (typeof data === 'object' && data !== null) {
-        setSelectedFile({
-          filename,
-          content: data
-        });
-      } else {
-        setSelectedFile({
-          filename,
-          content: { data: JSON.stringify(data, null, 2) }
-        });
-      }
-    } catch (error: unknown) {
-      console.error('Load File Error:', error);
-      setSelectedFile({
-        filename,
-        content: { error: `Network Error loading file ${filename}: ${error instanceof Error ? error.message : String(error)}` }
-      });
-    }
-  };
+            if (!response.ok) {
+                const text = await response.text();
+                console.log('Load File Response Body:', text.slice(0, 200));
+                setSelectedFile({
+                    filename,
+                    content: { error: `Error loading file ${filename}: HTTP ${response.status} - ${text.slice(0, 100) || response.statusText}` }
+                });
+                return;
+            }
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-  };
+            const data = await response.json();
+            if (filename.endsWith('.md')) {
+                setSelectedFile({
+                    filename,
+                    content: typeof data === 'string' ? data : data.content || JSON.stringify(data, null, 2)
+                });
+            } else if (typeof data === 'object' && data !== null) {
+                setSelectedFile({
+                    filename,
+                    content: data
+                });
+            } else {
+                setSelectedFile({
+                    filename,
+                    content: { data: JSON.stringify(data, null, 2) }
+                });
+            }
+        } catch (error: unknown) {
+            console.error('Load File Error:', error);
+            setSelectedFile({
+                filename,
+                content: { error: `Network Error loading file ${filename}: ${error instanceof Error ? error.message : String(error)}` }
+            });
+        }
+    };
 
-  return (
-    <div className={`min-h-screen transition-all duration-500 animate-gradient-xy ${
-      theme === 'dark' 
-        ? 'bg-gradient-to-br from-gray-900 via-purple-900/80 to-violet-900/60' 
-        : 'bg-gradient-to-br from-blue-50 via-indigo-50/80 to-purple-50/60'
-    }`}>
-      {/* Animated Background Elements */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className={`absolute top-20 left-10 w-72 h-72 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-float ${
-          theme === 'dark' ? 'bg-purple-400' : 'bg-purple-300'
-        }`} style={{ animationDelay: '0s' }}></div>
-        <div className={`absolute top-40 right-20 w-72 h-72 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-float ${
-          theme === 'dark' ? 'bg-yellow-400' : 'bg-yellow-300'
-        }`} style={{ animationDelay: '2s' }}></div>
-        <div className={`absolute -bottom-8 left-20 w-72 h-72 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-float ${
-          theme === 'dark' ? 'bg-pink-400' : 'bg-pink-300'
-        }`} style={{ animationDelay: '4s' }}></div>
-      </div>
-      {/* Header */}
-      <header className={`backdrop-blur-md border-b transition-colors duration-300 ${
-        theme === 'dark' 
-          ? 'bg-black/20 border-white/10' 
-          : 'bg-white/30 border-black/10'
-      }`}>
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl">
-                <Globe className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h1 className={`text-2xl font-bold ${
-                  theme === 'dark' ? 'text-white' : 'text-gray-900'
-                }`}>Talk Docs. Learn Fast. Powered by AI.</h1>
-                <p className={`text-sm ${
-                  theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
-                }`}>Advanced Documentation Scraper</p>
-              </div>
-            </div>
-            
-            <div className="flex items-center space-x-4">
-              {/* API Status Indicator */}
-              <div className={`flex items-center space-x-2 px-3 py-1 rounded-lg ${
-                apiStatus === 'online' ? 'bg-green-500/20 text-green-500' :
-                apiStatus === 'offline' ? 'bg-red-500/20 text-red-500' :
-                'bg-yellow-500/20 text-yellow-500'
-              }`}>
-                <Server className="w-4 h-4" />
-                <span className="text-sm font-medium">
-                  {apiStatus === 'online' ? 'API Online' :
-                   apiStatus === 'offline' ? 'API Offline' :
-                   'Checking...'}
-                </span>
-              </div>
-              
-              <button
-                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                className={`p-2 rounded-lg transition-colors ${
-                  theme === 'dark' 
-                    ? 'bg-white/10 hover:bg-white/20 text-white' 
-                    : 'bg-black/10 hover:bg-black/20 text-gray-900'
-                }`}
-                title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-              >
-                {theme === 'dark' ? '☀️' : '🌙'}
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
+    const copyToClipboard = (text: string) => {
+        navigator.clipboard.writeText(text);
+    };
 
-      {/* API Offline Warning */}
-      {apiStatus === 'offline' && (
-        <div className="bg-red-500/20 border-l-4 border-red-500 p-4 mx-6 mt-4 rounded-r-lg">
-          <div className="flex items-center">
-            <AlertCircle className="w-5 h-5 text-red-500 mr-3" />
-            <div>
-              <p className={`font-medium ${theme === 'dark' ? 'text-red-400' : 'text-red-600'}`}>
-                Backend API is offline
-              </p>
-              <p className={`text-sm ${theme === 'dark' ? 'text-red-300' : 'text-red-500'}`}>
-                {import.meta.env.DEV 
-                  ? 'Please start the backend server by running: npm run backend'
-                  : 'Backend service is currently unavailable. Please try again later.'
-                }
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Navigation */}
-      <nav className="container mx-auto px-6 py-4">
-        <div className={`flex space-x-1 p-1 rounded-xl backdrop-blur-md ${
-          theme === 'dark' ? 'bg-white/10' : 'bg-white/40'
-        }`}>
-          {[
-            { id: 'scraper', label: 'Scraper', icon: Search },
-            { id: 'history', label: 'Files', icon: History },
-            { id: 'settings', label: 'Settings', icon: Settings }
-          ].map(({ id, label, icon: Icon }) => (
-            <button
-              key={id}
-              onClick={() => setActiveTab(id as 'scraper' | 'history' | 'settings')}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-300 ${
-                activeTab === id
-                  ? theme === 'dark'
-                    ? 'bg-white/20 text-white shadow-lg'
-                    : 'bg-white/60 text-gray-900 shadow-lg'
-                  : theme === 'dark'
-                    ? 'text-gray-300 hover:bg-white/10'
-                    : 'text-gray-600 hover:bg-white/30'
-              }`}
-            >
-              <Icon className="w-4 h-4" />
-              <span className="font-medium">{label}</span>
-            </button>
-          ))}
-        </div>
-      </nav>
-
-      <div className="container mx-auto px-6 pb-8">
-        {/* Scraper Tab */}
-        {activeTab === 'scraper' && (
-          <div className="space-y-8 animate-fade-in-up">
-            {/* Hero Section */}
-            <Card variant="glass" className="p-8 text-center">
-              <div className="flex items-center justify-center mb-4">
-                <div className="p-3 bg-gradient-primary rounded-2xl">
-                  <Sparkles className="w-8 h-8 text-white animate-pulse" />
-                </div>
-              </div>
-              <h2 className={`text-3xl font-bold mb-2 text-shadow ${
-                theme === 'dark' ? 'text-white' : 'text-gray-900'
-              }`}>AI-Powered Documentation Extraction</h2>
-              <p className={`text-lg mb-6 ${
-                theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
-              }`}>Transform any documentation site into structured, searchable content</p>
-              
-              {/* Quick Stats */}
-              <div className="grid grid-cols-3 gap-4 mb-6">
-                <div className="text-center">
-                  <div className={`text-2xl font-bold ${
-                    theme === 'dark' ? 'text-blue-400' : 'text-blue-600'
-                  }`}>⚡</div>
-                  <div className={`text-sm ${
-                    theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
-                  }`}>Lightning Fast</div>
-                </div>
-                <div className="text-center">
-                  <div className={`text-2xl font-bold ${
-                    theme === 'dark' ? 'text-green-400' : 'text-green-600'
-                  }`}>🎯</div>
-                  <div className={`text-sm ${
-                    theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
-                  }`}>Precise Extraction</div>
-                </div>
-                <div className="text-center">
-                  <div className={`text-2xl font-bold ${
-                    theme === 'dark' ? 'text-purple-400' : 'text-purple-600'
-                  }`}>🧠</div>
-                  <div className={`text-sm ${
-                    theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
-                  }`}>AI Enhanced</div>
-                </div>
-              </div>
-            </Card>
-
-            {/* Scraping Form */}
-            <Card variant="glass" className="p-6">
-              <div className="flex items-center mb-6">
-                <div className="p-2 bg-gradient-success rounded-lg mr-3">
-                  <Zap className="w-5 h-5 text-white" />
-                </div>
-                <h3 className={`text-xl font-semibold ${
-                  theme === 'dark' ? 'text-white' : 'text-gray-900'
-                }`}>Start New Extraction</h3>
-              </div>
-              
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <InputField
-                    label="Documentation Website"
-                    type="url"
-                    value={baseUrl}
-                    onChange={(e) => setBaseUrl(e.target.value)}
-                    placeholder="https://docs.example.com"
-                    icon={Globe}
-                    className="animate-slide-in-left"
-                  />
-                  <InputField
-                    label="Topic/Section"
-                    type="text"
-                    value={topic}
-                    onChange={(e) => setTopic(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && scrapeUrl()}
-                    placeholder="getting-started"
-                    icon={Brain}
-                    className="animate-slide-in-right"
-                  />
-                </div>
-
-                <div className="flex justify-center">
-                  <Button
-                    onClick={scrapeUrl}
-                    disabled={!baseUrl.trim() || !topic.trim() || isLoading || apiStatus !== 'online'}
-                    loading={isLoading}
-                    icon={isLoading ? undefined : Play}
-                    size="lg"
-                    className="shadow-glow hover:shadow-glow-hover"
-                  >
-                    {isLoading ? 'Extracting Documentation...' : 'Start Extraction'}
-                  </Button>
-                </div>
-              </div>
-            </Card>
-
-            {/* Status Card */}
-            <Card variant={statusType === 'error' ? 'default' : statusType === 'success' ? 'default' : 'glass'} className={`p-4 animate-scale-in ${
-              statusType === 'error' ? 'border-red-500/50 bg-red-500/10' :
-              statusType === 'success' ? 'border-green-500/50 bg-green-500/10' : ''
-            }`}>
-              <div className="flex items-start space-x-3">
-                <div className="mt-0.5">
-                  {statusType === 'error' && <AlertCircle className="w-5 h-5 text-red-500" />}
-                  {statusType === 'success' && <CheckCircle className="w-5 h-5 text-green-500" />}
-                  {statusType === 'normal' && <Brain className="w-5 h-5 text-blue-500" />}
-                </div>
-                <div className="flex-1">
-                  <h4 className={`font-medium mb-1 ${
-                    statusType === 'error' ? 'text-red-600 dark:text-red-400' :
-                    statusType === 'success' ? 'text-green-600 dark:text-green-400' :
-                    theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
-                  }`}>
-                    {statusType === 'error' ? 'Extraction Error' :
-                     statusType === 'success' ? 'Extraction Complete' :
-                     'Status'}
-                  </h4>
-                  <p className={`text-sm whitespace-pre-wrap ${
-                    statusType === 'error' ? 'text-red-500 dark:text-red-300' :
-                    statusType === 'success' ? 'text-green-600 dark:text-green-400' :
-                    theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
-                  }`}>
-                    {status}
-                  </p>
-                </div>
-              </div>
-            </Card>
-          </div>
-        )}
-
-        {/* Files Tab */}
-        {activeTab === 'history' && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-fade-in-up">
-            {/* Available Files */}
-            <Card variant="glass" className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center">
-                  <div className="p-2 bg-gradient-secondary rounded-lg mr-3">
-                    <Database className="w-5 h-5 text-white" />
-                  </div>
-                  <h2 className={`text-xl font-semibold ${
-                    theme === 'dark' ? 'text-white' : 'text-gray-900'
-                  }`}>Documentation Library</h2>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={listScrapedFiles}
-                  icon={RefreshCw}
-                  className="shrink-0"
-                >
-                  Refresh
-                </Button>
-              </div>
-
-              {scrapedFiles.length === 0 ? (
-                <EmptyState
-                  icon={FileText}
-                  title="No documentation found"
-                  description="Start by extracting some documentation content"
-                  action={{
-                    label: "Go to Scraper",
-                    onClick: () => setActiveTab('scraper')
-                  }}
+    return (
+        <div className="min-h-screen text-white overflow-hidden relative" style={{ background: '#0A0B0E' }}>
+            {/* Animated Background */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                <div
+                    className="absolute w-96 h-96 bg-blue-500/20 rounded-full blur-3xl animate-pulse"
+                    style={{ top: '10%', left: '10%', animation: 'float 8s ease-in-out infinite' }}
                 />
-              ) : (
-                <div className="space-y-3 max-h-[600px] overflow-y-auto custom-scrollbar">
-                  {scrapedFiles.map((filename) => (
-                    <FileListItem
-                      key={filename}
-                      filename={filename}
-                      isSelected={selectedFile?.filename === filename}
-                      onClick={() => loadFileContent(filename)}
-                      icon={FileText}
-                    />
-                  ))}
-                </div>
-              )}
-            </Card>
-
-            {/* File Content */}
-            <Card variant="glass" className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center">
-                  <div className="p-2 bg-gradient-primary rounded-lg mr-3">
-                    <Brain className="w-5 h-5 text-white" />
-                  </div>
-                  <h2 className={`text-xl font-semibold ${
-                    theme === 'dark' ? 'text-white' : 'text-gray-900'
-                  }`}>Content Viewer</h2>
-                </div>
-                {selectedFile && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    icon={Download}
-                    onClick={() => {
-                      const dataStr = JSON.stringify(selectedFile.content, null, 2);
-                      const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-                      const exportFileDefaultName = selectedFile.filename;
-                      const linkElement = document.createElement('a');
-                      linkElement.setAttribute('href', dataUri);
-                      linkElement.setAttribute('download', exportFileDefaultName);
-                      linkElement.click();
-                    }}
-                  >
-                    Export
-                  </Button>
-                )}
-              </div>
-
-              {!selectedFile ? (
-                <EmptyState
-                  icon={Database}
-                  title="Select a document"
-                  description="Choose a file from the library to view its content"
+                <div
+                    className="absolute w-96 h-96 bg-emerald-500/20 rounded-full blur-3xl animate-pulse"
+                    style={{ bottom: '10%', right: '10%', animation: 'float 10s ease-in-out infinite reverse' }}
                 />
-              ) : selectedFile.filename.endsWith('.md') ? (
-                <MarkdownViewer
-                  content={typeof selectedFile.content === 'string' ? selectedFile.content : JSON.stringify(selectedFile.content, null, 2)}
-                  filename={selectedFile.filename}
-                  theme={theme}
+                <div
+                    className="absolute w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl"
+                    style={{ top: `${mousePosition.y / 20}px`, left: `${mousePosition.x / 20}px`, transition: 'all 0.3s ease-out' }}
                 />
-              ) : (
-                <div className="space-y-4 max-h-[800px] overflow-y-auto custom-scrollbar">
-                  {typeof selectedFile.content === 'string' ? (
-                    <div className="p-4 bg-gray-100 dark:bg-gray-800 rounded-lg">
-                      <pre className="whitespace-pre-wrap text-sm text-gray-800 dark:text-gray-200">
-                        {selectedFile.content}
-                      </pre>
+            </div>
+
+            {/* Header */}
+            <header className="relative z-10 px-8 py-6 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    <div className="relative">
+                        <Brain className="w-10 h-10 text-blue-400" />
+                        <Sparkles className="w-4 h-4 text-emerald-400 absolute -top-1 -right-1 animate-pulse" />
                     </div>
-                  ) : (
-                    Object.entries(selectedFile.content).map(([url, content]) => (
-                      <FileContentItem
-                        key={url}
-                        url={url}
-                        content={typeof content === 'string' ? content : JSON.stringify(content, null, 2)}
-                        theme={theme}
-                        onCopyUrl={copyToClipboard}
-                        onCopyContent={copyToClipboard}
-                      />
-                    ))
-                  )}
-                </div>
-              )}
-            </Card>
-          </div>
-        )}
-
-        {/* Settings Tab */}
-        {activeTab === 'settings' && (
-          <div className={`p-6 rounded-2xl backdrop-blur-md ${
-            theme === 'dark' ? 'bg-white/10' : 'bg-white/40'
-          }`}>
-            <h2 className={`text-xl font-semibold mb-6 ${
-              theme === 'dark' ? 'text-white' : 'text-gray-900'
-            }`}>Settings</h2>
-
-            <div className="space-y-6">
-              <div>
-                <h3 className={`text-lg font-medium mb-4 ${
-                  theme === 'dark' ? 'text-gray-200' : 'text-gray-700'
-                }`}>API Configuration</h3>
-                <div className={`p-4 rounded-xl ${
-                  theme === 'dark' ? 'bg-white/10' : 'bg-white/60'
-                }`}>
-                  <div className="flex items-center justify-between">
                     <div>
-                      <p className={`font-medium ${
-                        theme === 'dark' ? 'text-white' : 'text-gray-900'
-                      }`}>Backend URL</p>
-                      <p className={`text-sm ${
-                        theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
-                      }`}>{API_BASE_URL}</p>
+                        <h1 className="text-2xl font-bold gradient-text">DocuMind AI</h1>
+                        <p className="text-xs text-blue-300">Extract. Transform. Discover.</p>
                     </div>
-                    <div className={`px-3 py-1 rounded-full text-xs font-medium ${
-                      apiStatus === 'online' ? 'bg-green-500/20 text-green-500' :
-                      apiStatus === 'offline' ? 'bg-red-500/20 text-red-500' :
-                      'bg-yellow-500/20 text-yellow-500'
-                    }`}>
-                      {apiStatus}
-                    </div>
-                  </div>
                 </div>
-              </div>
 
-              <div>
-                <h3 className={`text-lg font-medium mb-4 ${
-                  theme === 'dark' ? 'text-gray-200' : 'text-gray-700'
-                }`}>Appearance</h3>
-                <div className={`p-4 rounded-xl ${
-                  theme === 'dark' ? 'bg-white/10' : 'bg-white/60'
-                }`}>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className={`font-medium ${
-                        theme === 'dark' ? 'text-white' : 'text-gray-900'
-                      }`}>Theme</p>
-                      <p className={`text-sm ${
-                        theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
-                      }`}>Choose your preferred theme</p>
+                <div className="flex items-center gap-4">
+                    <div className={`flex items-center gap-2 px-4 py-2 rounded-full glass ${apiStatus === 'online' ? 'border-emerald-500/50' : 'border-red-500/50'
+                        }`}>
+                        <div className={`w-2 h-2 rounded-full ${apiStatus === 'online' ? 'bg-emerald-400' : 'bg-red-400'
+                            } animate-pulse`} />
+                        <span className="text-sm font-medium">
+                            {apiStatus === 'online' ? 'API Online' : apiStatus === 'offline' ? 'API Offline' : 'Checking...'}
+                        </span>
                     </div>
+                </div>
+            </header>
+
+            {/* API Offline Warning */}
+            {apiStatus === 'offline' && (
+                <div className="relative z-10 mx-8 mb-4 glass border-l-4 border-red-500 p-4 rounded-r-lg">
+                    <div className="flex items-center">
+                        <AlertCircle className="w-5 h-5 text-red-500 mr-3" />
+                        <div>
+                            <p className="font-medium text-red-400">Backend API is offline</p>
+                            <p className="text-sm text-red-300">Please start the backend server</p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Navigation */}
+            <nav className="relative z-10 px-8 py-4 flex gap-6">
+                {[
+                    { id: 'scraper', label: 'Scraper', icon: Globe },
+                    { id: 'history', label: 'Files', icon: BookOpen },
+                    { id: 'settings', label: 'Settings', icon: Settings }
+                ].map(({ id, label, icon: Icon }) => (
                     <button
-                      onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                      className={`px-4 py-2 rounded-lg transition-colors duration-300 ${
-                        theme === 'dark'
-                          ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 active:scale-95'
-                          : 'bg-blue-500/20 text-blue-600 hover:bg-blue-500/30 active:scale-95'
-                      }`}
-                      title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+                        key={id}
+                        onClick={() => setActiveTab(id as 'scraper' | 'history' | 'settings')}
+                        className={`px-4 py-2 rounded-lg glass transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-blue-500/20 ${activeTab === id ? 'bg-white/10' : ''
+                            }`}
                     >
-                      {theme === 'dark' ? '🌙 Dark' : '☀️ Light'}
+                        <Icon className="w-4 h-4 inline mr-2" />
+                        {label}
                     </button>
-                  </div>
-                </div>
-              </div>
+                ))}
+            </nav>
 
-              <div>
-                <h3 className={`text-lg font-medium mb-4 ${
-                  theme === 'dark' ? 'text-gray-200' : 'text-gray-700'
-                }`}>About</h3>
-                <div className={`p-4 rounded-xl ${
-                  theme === 'dark' ? 'bg-white/10' : 'bg-white/60'
-                }`}>
-                  <p className={`text-sm ${
-                    theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
-                  }`}>
-                    WebScraper Pro - Advanced documentation scraping tool with AI-powered content extraction.
-                    Built with React, TypeScript, and FastAPI.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
+            {/* Main Content */}
+            <main className="relative z-10 px-8 py-8 max-w-6xl mx-auto">
+                {/* Scraper Tab */}
+                {activeTab === 'scraper' && (
+                    <div>
+                        {/* Hero Section */}
+                        <div className="text-center mb-12">
+                            <h2 className="text-5xl font-bold mb-6 gradient-text">
+                                AI Powered Web Extraction
+                            </h2>
+                            <p className="text-xl text-blue-200 max-w-2xl mx-auto">
+                                Extract structured data from any site instantly.
+                            </p>
+                        </div>
+
+                        {/* Feature Cards */}
+                        <div className="grid grid-cols-3 gap-6 mb-12">
+                            {[
+                                { icon: Zap, title: 'Lightning Fast', desc: 'Extract docs in seconds', color: 'from-blue-500 to-cyan-500' },
+                                { icon: Target, title: 'Precise Extraction', desc: 'AI driven accuracy', color: 'from-emerald-500 to-teal-500' },
+                                { icon: Brain, title: 'AI Enhanced', desc: 'Smart content parsing', color: 'from-cyan-500 to-blue-500' }
+                            ].map((feature, i) => (
+                                <div
+                                    key={i}
+                                    className="glass border border-blue-500/20 rounded-2xl p-6 hover:scale-105 transition-all duration-300 hover:shadow-2xl cursor-pointer group"
+                                >
+                                    <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${feature.color} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300`}>
+                                        <feature.icon className="w-6 h-6 text-white" />
+                                    </div>
+                                    <h3 className="text-lg font-semibold mb-2">{feature.title}</h3>
+                                    <p className="text-sm text-blue-300">{feature.desc}</p>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Extraction Form */}
+                        <div className="glass border border-blue-500/20 rounded-3xl p-8 shadow-2xl mb-8">
+                            <div className="flex items-center gap-3 mb-8">
+                                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
+                                    <Zap className="w-6 h-6 text-white" />
+                                </div>
+                                <h3 className="text-2xl font-bold">Start New Extraction</h3>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-6 mb-8">
+                                {/* URL Input */}
+                                <div>
+                                    <label className="block text-sm font-medium mb-3 text-blue-300">
+                                        Documentation Website
+                                    </label>
+                                    <div
+                                        className={`glass rounded-xl transition-all duration-300 ${urlFocused ? 'ring-2 ring-blue-500 shadow-lg shadow-blue-500/30' : ''
+                                            }`}
+                                    >
+                                        <div className="flex items-center gap-3 px-4 py-4">
+                                            <Globe className="w-5 h-5 text-blue-400" />
+                                            <input
+                                                type="text"
+                                                value={baseUrl}
+                                                onChange={(e) => setBaseUrl(e.target.value)}
+                                                placeholder="https://docs.example.com"
+                                                className="flex-1 bg-transparent outline-none text-white placeholder-blue-400/50"
+                                                onFocus={() => setUrlFocused(true)}
+                                                onBlur={() => setUrlFocused(false)}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Topic Input */}
+                                <div>
+                                    <label className="block text-sm font-medium mb-3 text-cyan-300">
+                                        Topic/Section
+                                    </label>
+                                    <div
+                                        className={`glass rounded-xl transition-all duration-300 ${topicFocused ? 'ring-2 ring-cyan-500 shadow-lg shadow-cyan-500/30' : ''
+                                            }`}
+                                    >
+                                        <div className="flex items-center gap-3 px-4 py-4">
+                                            <BookOpen className="w-5 h-5 text-cyan-400" />
+                                            <input
+                                                type="text"
+                                                value={topic}
+                                                onChange={(e) => setTopic(e.target.value)}
+                                                onKeyPress={(e) => e.key === 'Enter' && scrapeUrl()}
+                                                placeholder="getting-started"
+                                                className="flex-1 bg-transparent outline-none text-white placeholder-cyan-400/50"
+                                                onFocus={() => setTopicFocused(true)}
+                                                onBlur={() => setTopicFocused(false)}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* CTA Button */}
+                            <button
+                                onClick={scrapeUrl}
+                                disabled={!baseUrl.trim() || !topic.trim() || isLoading || apiStatus !== 'online'}
+                                className="w-full py-4 rounded-xl bg-gradient-to-r from-blue-600 via-cyan-600 to-emerald-600 bg-size-200 hover:bg-pos-100 transition-all duration-500 font-semibold text-lg shadow-lg hover:shadow-2xl hover:shadow-blue-500/50 hover:scale-105 transform flex items-center justify-center gap-3 group disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                            >
+                                <Zap className={`w-5 h-5 ${isLoading ? 'animate-spin' : 'group-hover:animate-pulse'}`} />
+                                {isLoading ? 'Extracting Documentation...' : 'Start Extraction'}
+                                <Sparkles className="w-5 h-5 group-hover:rotate-180 transition-transform duration-500" />
+                            </button>
+                        </div>
+
+                        {/* Status Section */}
+                        <div className="glass border border-blue-500/20 rounded-2xl p-6">
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500/20 to-emerald-500/20 flex items-center justify-center">
+                                    {statusType === 'error' && <AlertCircle className="w-5 h-5 text-red-400" />}
+                                    {statusType === 'success' && <CheckCircle className="w-5 h-5 text-emerald-400" />}
+                                    {statusType === 'normal' && <Target className="w-5 h-5 text-blue-400" />}
+                                </div>
+                                <h3 className="text-xl font-semibold">
+                                    {statusType === 'error' ? 'Extraction Error' :
+                                        statusType === 'success' ? 'Extraction Complete' :
+                                            'Status'}
+                                </h3>
+                            </div>
+
+                            <div className={`flex items-center gap-3 py-3 px-4 rounded-xl border ${statusType === 'error' ? 'bg-red-900/20 border-red-500/20' :
+                                    statusType === 'success' ? 'bg-emerald-900/20 border-emerald-500/20' :
+                                        'bg-slate-900/50 border-blue-500/20'
+                                }`}>
+                                <div className={`w-2 h-2 rounded-full animate-pulse ${statusType === 'error' ? 'bg-red-400' :
+                                        statusType === 'success' ? 'bg-emerald-400' :
+                                            'bg-blue-400/50'
+                                    }`} />
+                                <p className={`${statusType === 'error' ? 'text-red-300' :
+                                        statusType === 'success' ? 'text-emerald-300' :
+                                            'text-blue-300/70'
+                                    }`}>{status}</p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Files Tab */}
+                {activeTab === 'history' && (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div className="glass border border-blue-500/20 rounded-2xl p-6">
+                            <div className="flex items-center justify-between mb-6">
+                                <div className="flex items-center">
+                                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center mr-3">
+                                        <Database className="w-6 h-6 text-white" />
+                                    </div>
+                                    <h2 className="text-xl font-semibold">Documentation Library</h2>
+                                </div>
+                                <button
+                                    onClick={listScrapedFiles}
+                                    className="px-3 py-2 glass rounded-lg hover:bg-white/10 transition-all duration-300"
+                                >
+                                    <RefreshCw className="w-4 h-4 inline mr-2" />
+                                    Refresh
+                                </button>
+                            </div>
+
+                            {scrapedFiles.length === 0 ? (
+                                <EmptyState
+                                    icon={FileText}
+                                    title="No documentation found"
+                                    description="Start by extracting some documentation content"
+                                    action={{
+                                        label: "Go to Scraper",
+                                        onClick: () => setActiveTab('scraper')
+                                    }}
+                                />
+                            ) : (
+                                <div className="space-y-3 max-h-[600px] overflow-y-auto custom-scrollbar">
+                                    {scrapedFiles.map((filename) => (
+                                        <FileListItem
+                                            key={filename}
+                                            filename={filename}
+                                            isSelected={selectedFile?.filename === filename}
+                                            onClick={() => loadFileContent(filename)}
+                                            icon={FileText}
+                                        />
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="glass border border-blue-500/20 rounded-2xl p-6">
+                            <div className="flex items-center justify-between mb-6">
+                                <div className="flex items-center">
+                                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center mr-3">
+                                        <Brain className="w-6 h-6 text-white" />
+                                    </div>
+                                    <h2 className="text-xl font-semibold">Content Viewer</h2>
+                                </div>
+                                {selectedFile && (
+                                    <button
+                                        onClick={() => {
+                                            const dataStr = JSON.stringify(selectedFile.content, null, 2);
+                                            const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
+                                            const linkElement = document.createElement('a');
+                                            linkElement.setAttribute('href', dataUri);
+                                            linkElement.setAttribute('download', selectedFile.filename);
+                                            linkElement.click();
+                                        }}
+                                        className="px-3 py-2 glass rounded-lg hover:bg-white/10 transition-all duration-300"
+                                    >
+                                        <Download className="w-4 h-4 inline mr-2" />
+                                        Export
+                                    </button>
+                                )}
+                            </div>
+
+                            {!selectedFile ? (
+                                <EmptyState
+                                    icon={Database}
+                                    title="Select a document"
+                                    description="Choose a file from the library to view its content"
+                                />
+                            ) : selectedFile.filename.endsWith('.md') ? (
+                                <MarkdownViewer
+                                    content={typeof selectedFile.content === 'string' ? selectedFile.content : JSON.stringify(selectedFile.content, null, 2)}
+                                    filename={selectedFile.filename}
+                                    theme={theme}
+                                />
+                            ) : (
+                                <div className="space-y-4 max-h-[800px] overflow-y-auto custom-scrollbar">
+                                    {typeof selectedFile.content === 'string' ? (
+                                        <div className="p-4 bg-gray-800/50 rounded-lg">
+                                            <pre className="whitespace-pre-wrap text-sm text-gray-200">
+                                                {selectedFile.content}
+                                            </pre>
+                                        </div>
+                                    ) : (
+                                        Object.entries(selectedFile.content).map(([url, content]) => (
+                                            <FileContentItem
+                                                key={url}
+                                                url={url}
+                                                content={typeof content === 'string' ? content : JSON.stringify(content, null, 2)}
+                                                theme={theme}
+                                                onCopyUrl={copyToClipboard}
+                                                onCopyContent={copyToClipboard}
+                                            />
+                                        ))
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {/* Settings Tab */}
+                {activeTab === 'settings' && (
+                    <div className="glass border border-blue-500/20 rounded-2xl p-8">
+                        <h2 className="text-2xl font-semibold mb-8">Settings</h2>
+
+                        <div className="space-y-8">
+                            <div>
+                                <h3 className="text-lg font-medium mb-4 text-blue-200">API Configuration</h3>
+                                <div className="glass border border-blue-400/20 rounded-xl p-4">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <p className="font-medium text-white">Backend URL</p>
+                                            <p className="text-sm text-blue-300">{API_BASE_URL}</p>
+                                        </div>
+                                        <div className={`px-3 py-1 rounded-full text-xs font-medium ${apiStatus === 'online' ? 'bg-emerald-500/20 text-emerald-400' :
+                                                apiStatus === 'offline' ? 'bg-red-500/20 text-red-400' :
+                                                    'bg-yellow-500/20 text-yellow-400'
+                                            }`}>
+                                            {apiStatus}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <h3 className="text-lg font-medium mb-4 text-blue-200">About</h3>
+                                <div className="glass border border-blue-400/20 rounded-xl p-4">
+                                    <p className="text-sm text-blue-300">
+                                        DocuMind AI - Advanced documentation scraping tool with AI-powered content extraction.
+                                        Built with React, TypeScript, and FastAPI.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </main>
+        </div>
+    );
 }
 
 export default App;
