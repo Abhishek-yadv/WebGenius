@@ -293,7 +293,7 @@ function App() {
                             ].map((feature, i) => (
                                 <div
                                     key={i}
-                                    className="glass border border-blue-500/20 rounded-2xl p-6 hover:scale-105 transition-all duration-300 hover:shadow-2xl cursor-pointer group"
+                                    className="glass border border-blue-500/50 rounded-2xl p-6 hover:scale-105 transition-all duration-300 hover:shadow-2xl cursor-pointer group"
                                 >
                                     <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${feature.color} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300`}>
                                         <feature.icon className="w-6 h-6 text-white" />
@@ -305,7 +305,7 @@ function App() {
                         </div>
 
                         {/* Extraction Form */}
-                        <div className="glass border border-blue-500/20 rounded-3xl p-8 shadow-2xl mb-8">
+                        <div className="glass border border-blue-500/50 rounded-3xl p-8 shadow-2xl mb-8">
                             <div className="flex items-center gap-3 mb-8">
                                 <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
                                     <Zap className="w-6 h-6 text-white" />
@@ -320,7 +320,7 @@ function App() {
                                         Documentation Website
                                     </label>
                                     <div
-                                        className={`glass rounded-xl transition-all duration-300 ${urlFocused ? 'ring-2 ring-blue-500 shadow-lg shadow-blue-500/30' : ''
+                                        className={`glass border border-blue-500/50 rounded-xl transition-all duration-300 ${urlFocused ? 'ring-2 ring-blue-500 shadow-lg shadow-blue-500/30' : ''
                                             }`}
                                     >
                                         <div className="flex items-center gap-3 px-4 py-4">
@@ -344,7 +344,7 @@ function App() {
                                         Topic/Section
                                     </label>
                                     <div
-                                        className={`glass rounded-xl transition-all duration-300 ${topicFocused ? 'ring-2 ring-cyan-500 shadow-lg shadow-cyan-500/30' : ''
+                                        className={`glass border border-cyan-500/50 rounded-xl transition-all duration-300 ${topicFocused ? 'ring-2 ring-cyan-500 shadow-lg shadow-cyan-500/30' : ''
                                             }`}
                                     >
                                         <div className="flex items-center gap-3 px-4 py-4">
@@ -377,7 +377,7 @@ function App() {
                         </div>
 
                         {/* Status Section */}
-                        <div className="glass border border-blue-500/20 rounded-2xl p-6">
+                        <div className="glass border border-blue-500/50 rounded-2xl p-6">
                             <div className="flex items-center gap-3 mb-4">
                                 <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500/20 to-emerald-500/20 flex items-center justify-center">
                                     {statusType === 'error' && <AlertCircle className="w-5 h-5 text-red-400" />}
@@ -391,9 +391,9 @@ function App() {
                                 </h3>
                             </div>
 
-                            <div className={`flex items-center gap-3 py-3 px-4 rounded-xl border ${statusType === 'error' ? 'bg-red-900/20 border-red-500/20' :
-                                statusType === 'success' ? 'bg-emerald-900/20 border-emerald-500/20' :
-                                    'bg-slate-900/50 border-blue-500/20'
+                            <div className={`flex items-center gap-3 py-3 px-4 rounded-xl border ${statusType === 'error' ? 'bg-red-900/20 border-red-500/50' :
+                                statusType === 'success' ? 'bg-emerald-900/20 border-emerald-500/50' :
+                                    'bg-slate-900/50 border-blue-500/50'
                                 }`}>
                                 <div className={`w-2 h-2 rounded-full animate-pulse ${statusType === 'error' ? 'bg-red-400' :
                                     statusType === 'success' ? 'bg-emerald-400' :
