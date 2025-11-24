@@ -330,7 +330,7 @@ function App() {
                                                 value={baseUrl}
                                                 onChange={(e) => setBaseUrl(e.target.value)}
                                                 placeholder="https://docs.example.com"
-                                                className="flex-1 bg-transparent outline-none text-white placeholder-blue-400/50"
+                                                className="flex-1 bg-transparent outline-none border-0 text-white placeholder-blue-400/50"
                                                 onFocus={() => setUrlFocused(true)}
                                                 onBlur={() => setUrlFocused(false)}
                                             />
@@ -355,7 +355,7 @@ function App() {
                                                 onChange={(e) => setTopic(e.target.value)}
                                                 onKeyPress={(e) => e.key === 'Enter' && scrapeUrl()}
                                                 placeholder="getting-started"
-                                                className="flex-1 bg-transparent outline-none text-white placeholder-cyan-400/50"
+                                                className="flex-1 bg-transparent outline-none border-0 text-white placeholder-cyan-400/50"
                                                 onFocus={() => setTopicFocused(true)}
                                                 onBlur={() => setTopicFocused(false)}
                                             />
