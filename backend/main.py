@@ -52,7 +52,18 @@ async def get_browser():
         playwright = await async_playwright().start()
         _browser = await playwright.chromium.launch(
             headless=True,
-            args=['--disable-blink-features=AutomationControlled']  # Help with bot detection
+            args=[
+                '--disable-blink-features=AutomationControlled',
+                '--disable-dev-shm-usage',  # Prevents /dev/shm issues in containers
+                '--no-sandbox',  # Required for some container environments
+                '--disable-gpu',  # Reduce memory usage
+                '--disable-extensions',
+                '--disable-background-networking',
+                '--disable-sync',
+                '--disable-translate',
+                '--single-process',  # Reduces memory but may affect stability
+                '--no-zygote',
+            ]
         )
     return _browser
 
@@ -97,9 +108,9 @@ async def extract_links_from_section(page, section_url, section_prefix):
     
     logger.info(f"Navigating to section: {section_url}")
     try:
-        # Use 'load' instead of 'networkidle' to prevent timeouts on sites with 
-        # persistent connections (analytics, websockets, etc.)
-        await page.goto(section_url, timeout=60000, wait_until="load")
+        # Use 'domcontentloaded' for fastest load (no waiting for images/scripts)
+        # This is most reliable on low-memory environments like Render free tier
+        await page.goto(section_url, timeout=30000, wait_until="domcontentloaded")
         
         # Wait for common documentation containers
         try:
@@ -178,9 +189,8 @@ async def extract_content_from_page(page, url):
     """Extract and convert page content to markdown with improved parsing"""
     try:
         logger.info(f"Extracting content from: {url}")
-        # Use 'load' instead of 'networkidle' to prevent timeouts on sites with
-        # persistent connections (analytics, websockets, etc.)
-        await page.goto(url, timeout=60000, wait_until="load")
+        # Use 'domcontentloaded' for fastest load - most reliable on low-memory environments
+        await page.goto(url, timeout=30000, wait_until="domcontentloaded")
         
         # Wait for content to load
         try:
@@ -799,18 +809,20 @@ async def scrape_section(base_url, section):
     browser = await get_browser()
 
     # Create context with anti-detection measures and speed optimizations
+    # ⚡ MEMORY OPTIMIZED: Smaller viewport for low-RAM environments (Render free tier)
     context = await browser.new_context(
-        viewport={"width": 1920, "height": 1080},
+        viewport={"width": 1280, "height": 720},  # Smaller viewport = less memory
         user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         locale='en-US',
         timezone_id='America/New_York',
-        # ⚡ OPTIMIZED: Ignore HTTPS errors for speed
-        ignore_https_errors=True
+        ignore_https_errors=True,
+        java_script_enabled=True  # Keep JS for dynamic docs
     )
     
-    # ⚡ OPTIMIZED: Block images, CSS, fonts, media for maximum speed (70% bandwidth reduction)
+    # ⚡ MEMORY OPTIMIZED: Block as many resources as possible for 500MB environments
+    blocked_resources = ["image", "stylesheet", "font", "media", "websocket", "manifest", "other"]
     await context.route("**/*", lambda route: (
-        route.abort() if route.request.resource_type in ["image", "stylesheet", "font", "media"]
+        route.abort() if route.request.resource_type in blocked_resources
         else route.continue_()
     ))
 
@@ -854,7 +866,7 @@ async def scrape_section(base_url, section):
                 await page.close()
         
         # Process pages concurrently with a limit
-        max_concurrent = 30  # ⚡ OPTIMIZED: Maximum speed - 30 concurrent pages
+        max_concurrent = 5  # ⚡ MEMORY OPTIMIZED: Low concurrency for 500MB environments
         results = []
         
         for i in range(0, len(links), max_concurrent):
