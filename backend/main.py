@@ -97,8 +97,9 @@ async def extract_links_from_section(page, section_url, section_prefix):
     
     logger.info(f"Navigating to section: {section_url}")
     try:
-        # Wait for network to be idle to allow JS-heavy sites to load
-        await page.goto(section_url, timeout=45000, wait_until="networkidle")
+        # Use 'load' instead of 'networkidle' to prevent timeouts on sites with 
+        # persistent connections (analytics, websockets, etc.)
+        await page.goto(section_url, timeout=60000, wait_until="load")
         
         # Wait for common documentation containers
         try:
@@ -177,8 +178,9 @@ async def extract_content_from_page(page, url):
     """Extract and convert page content to markdown with improved parsing"""
     try:
         logger.info(f"Extracting content from: {url}")
-        # Wait for network idle to ensure JS-rendered content is loaded
-        await page.goto(url, timeout=45000, wait_until="networkidle")
+        # Use 'load' instead of 'networkidle' to prevent timeouts on sites with
+        # persistent connections (analytics, websockets, etc.)
+        await page.goto(url, timeout=60000, wait_until="load")
         
         # Wait for content to load
         try:
