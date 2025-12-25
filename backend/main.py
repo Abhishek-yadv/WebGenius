@@ -519,10 +519,8 @@ async def extract_content_from_page(page, url):
 
         def process_list(ul_ol, ordered=False, depth=0):
             """Process ul/ol lists"""
-            # Mark the list itself as processed
-            if id(ul_ol) in processed_elements:
-                return ""
-            processed_elements.add(id(ul_ol))
+            # NOTE: The caller (process_element) already checks and marks this element
+            # as processed when called from there. Keep for direct recursive calls.
             
             items = []
             counter = 1
@@ -559,10 +557,9 @@ async def extract_content_from_page(page, url):
 
         def process_table(table):
             """Process HTML tables to markdown"""
-            # Mark the table as processed to prevent duplicates
-            if id(table) in processed_elements:
-                return ""
-            processed_elements.add(id(table))
+            # NOTE: The caller (process_element) already checks and marks this element
+            # as processed. We only need to handle the case of nested tables here.
+            # Don't return early - the main processed check is in process_element.
             
             rows = []
             headers = []
@@ -604,10 +601,8 @@ async def extract_content_from_page(page, url):
 
         def process_definition_list(dl):
             """Process definition lists - enhanced for Sphinx/PyData documentation"""
-            # Mark the definition list as processed
-            if id(dl) in processed_elements:
-                return ""
-            processed_elements.add(id(dl))
+            # NOTE: The caller (process_element) already checks and marks this element
+            # as processed when called from there.
             
             result = []
             
