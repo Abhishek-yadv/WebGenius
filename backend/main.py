@@ -192,6 +192,12 @@ async def extract_content_from_page(page, url):
         # Try to find the main content container with multiple strategies
         main_content = None
         content_selectors = [
+            # PyData/Sphinx theme selectors (pandas, numpy, etc.)
+            'article.bd-article',
+            '.bd-article',
+            '.bd-content',
+            '.bd-article-container',
+            # Standard selectors
             'main',
             'article',
             '[role="main"]',
@@ -223,6 +229,10 @@ async def extract_content_from_page(page, url):
             "nav", ".nav", ".navbar", ".navigation", "[role='navigation']",
             ".sidebar", ".side-bar", ".menu", ".toc", ".table-of-contents",
             ".breadcrumb", ".breadcrumbs", ".pagination",
+            
+            # PyData/Sphinx theme sidebars (pandas, numpy, etc.)
+            ".bd-sidebar", ".bd-sidebar-primary", ".bd-sidebar-secondary",
+            ".bd-toc", ".toc-tree", ".header-article__inner",
             
             # Header and footer elements
             "header", ".header", "footer", ".footer", "[role='contentinfo']", "[role='banner']",
@@ -593,23 +603,67 @@ async def extract_content_from_page(page, url):
             return "\n" + "\n".join(rows) + "\n" if rows else ""
 
         def process_definition_list(dl):
-            """Process definition lists"""
+            """Process definition lists - enhanced for Sphinx/PyData documentation"""
             # Mark the definition list as processed
             if id(dl) in processed_elements:
                 return ""
             processed_elements.add(id(dl))
             
             result = []
+            
+            # Check if this is a Sphinx class/function definition (py class, py function, etc.)
+            dl_classes = dl.get('class', [])
+            is_sphinx_def = any(cls.startswith('py') for cls in dl_classes) if dl_classes else False
+            
             for child in dl.children:
                 if hasattr(child, 'name'):
                     if id(child) not in processed_elements:
                         processed_elements.add(id(child))
+                        
                         if child.name == "dt":
-                            content = process_inline_elements(child)
-                            result.append(f"\n**{content or child.get_text(strip=True)}**")
+                            # Handle Sphinx signature elements
+                            sig_classes = child.get('class', [])
+                            is_signature = 'sig' in sig_classes if sig_classes else False
+                            
+                            if is_signature or is_sphinx_def:
+                                # Extract text more carefully for signatures
+                                sig_text = child.get_text(strip=True)
+                                # Clean up common Sphinx signature artifacts
+                                sig_text = sig_text.replace('[source]', '').replace('[#]', '').strip()
+                                if sig_text:
+                                    result.append(f"\n## {sig_text}\n")
+                            else:
+                                content = process_inline_elements(child)
+                                if content:
+                                    result.append(f"\n**{content}**")
+                                else:
+                                    term_text = child.get_text(strip=True)
+                                    if term_text:
+                                        result.append(f"\n**{term_text}**")
+                        
                         elif child.name == "dd":
-                            content = process_inline_elements(child)
-                            result.append(f": {content or child.get_text(strip=True)}")
+                            # Process dd content recursively to capture all nested elements
+                            dd_parts = []
+                            for dd_child in child.children:
+                                if hasattr(dd_child, 'name'):
+                                    if id(dd_child) not in processed_elements:
+                                        child_result = process_element(dd_child, depth=0)
+                                        if child_result and child_result.strip():
+                                            dd_parts.append(child_result)
+                                elif isinstance(dd_child, NavigableString):
+                                    text = str(dd_child).strip()
+                                    if text and len(text) > 1:
+                                        dd_parts.append(text)
+                            
+                            if dd_parts:
+                                dd_content = "\n".join(dd_parts)
+                                result.append(dd_content)
+                            else:
+                                # Fallback to inline processing
+                                content = process_inline_elements(child)
+                                if content:
+                                    result.append(f": {content}")
+            
             return "\n".join(result) + "\n" if result else ""
 
         # Process only direct children of main content to avoid duplicates
