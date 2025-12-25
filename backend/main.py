@@ -180,8 +180,13 @@ async def extract_links_from_section(page, section_url, section_prefix):
     
     logger.info(f"Found {len(links)} unique links in section {section_prefix}")
     
-    # Ensure the initial page is always first in the list to be scraped
-    return [section_url] + links
+    # Ensure the initial page is first in the list (only if not already present)
+    if section_url not in links:
+        return [section_url] + links
+    else:
+        # Move section_url to the front if it's in links
+        links.remove(section_url)
+        return [section_url] + links
 
 
 async def extract_content_from_page(page, url):
