@@ -61,8 +61,7 @@ async def get_browser():
                 '--disable-background-networking',
                 '--disable-sync',
                 '--disable-translate',
-                '--single-process',  # Reduces memory but may affect stability
-                '--no-zygote',
+                # NOTE: --single-process and --no-zygote removed - they cause crashes
             ]
         )
     return _browser
