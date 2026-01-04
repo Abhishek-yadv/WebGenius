@@ -195,9 +195,9 @@ function App() {
     };
 
     return (
-        <div className="min-h-screen text-white overflow-hidden relative" style={{ background: '#0A0B0E' }}>
+        <div className="min-h-screen text-white overflow-x-hidden relative" style={{ background: '#0A0B0E' }}>
             {/* Animated Background */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <div className="fixed inset-0 overflow-hidden pointer-events-none">
                 <div
                     className="absolute w-96 h-96 bg-blue-500/20 rounded-full blur-3xl animate-pulse"
                     style={{ top: '10%', left: '10%', animation: 'float 8s ease-in-out infinite' }}
@@ -213,7 +213,7 @@ function App() {
             </div>
 
             {/* Header */}
-            <header className="relative z-10 px-8 py-6 flex items-center justify-between">
+            <header className="relative z-10 px-4 md:px-8 py-6 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0">
                 <div className="flex items-center gap-3">
                     <div className="relative">
                         <Brain className="w-10 h-10 text-blue-400" />
@@ -239,7 +239,7 @@ function App() {
 
             {/* API Offline Warning */}
             {apiStatus === 'offline' && (
-                <div className="relative z-10 mx-8 mb-4 glass border-l-4 border-red-500 p-4 rounded-r-lg">
+                <div className="relative z-10 mx-4 md:mx-8 mb-4 glass border-l-4 border-red-500 p-4 rounded-r-lg">
                     <div className="flex items-center">
                         <AlertCircle className="w-5 h-5 text-red-500 mr-3" />
                         <div>
@@ -251,7 +251,7 @@ function App() {
             )}
 
             {/* Navigation */}
-            <nav className="relative z-10 px-8 py-4 flex gap-6">
+            <nav className="relative z-10 px-4 md:px-8 py-4 flex gap-4 md:gap-6 overflow-x-auto pb-2 custom-scrollbar">
                 {[
                     { id: 'scraper', label: 'Scraper', icon: Globe },
                     { id: 'history', label: 'Files', icon: BookOpen },
@@ -260,7 +260,7 @@ function App() {
                     <button
                         key={id}
                         onClick={() => setActiveTab(id as 'scraper' | 'history' | 'settings')}
-                        className={`px-4 py-2 rounded-lg glass transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-blue-500/20 ${activeTab === id ? 'bg-white/10' : ''
+                        className={`px-4 py-2 rounded-lg glass transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-blue-500/20 whitespace-nowrap flex-shrink-0 ${activeTab === id ? 'bg-white/10' : ''
                             }`}
                     >
                         <Icon className="w-4 h-4 inline mr-2" />
@@ -270,22 +270,22 @@ function App() {
             </nav>
 
             {/* Main Content */}
-            <main className="relative z-10 px-8 py-8 max-w-6xl mx-auto">
+            <main className="relative z-10 px-4 md:px-8 py-8 max-w-6xl mx-auto">
                 {/* Scraper Tab */}
                 {activeTab === 'scraper' && (
                     <div>
                         {/* Hero Section */}
-                        <div className="text-center mb-12">
-                            <h2 className="text-5xl font-bold mb-6 gradient-text">
+                        <div className="text-center mb-8 md:mb-12">
+                            <h2 className="text-3xl md:text-5xl font-bold mb-4 md:mb-6 gradient-text">
                                 AI Powered Web Extraction
                             </h2>
-                            <p className="text-xl text-blue-200 max-w-2xl mx-auto">
+                            <p className="text-lg md:text-xl text-blue-200 max-w-2xl mx-auto">
                                 Extract structured data from any site instantly.
                             </p>
                         </div>
 
                         {/* Feature Cards */}
-                        <div className="grid grid-cols-3 gap-6 mb-12">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
                             {[
                                 { icon: Zap, title: 'Lightning Fast', desc: 'Extract docs in seconds', color: 'from-blue-500 to-cyan-500' },
                                 { icon: Target, title: 'Precise Extraction', desc: 'AI driven accuracy', color: 'from-emerald-500 to-teal-500' },
@@ -305,15 +305,15 @@ function App() {
                         </div>
 
                         {/* Extraction Form */}
-                        <div className="glass border border-blue-500/50 rounded-3xl p-8 shadow-2xl mb-8">
+                        <div className="glass border border-blue-500/50 rounded-3xl p-6 md:p-8 shadow-2xl mb-8">
                             <div className="flex items-center gap-3 mb-8">
                                 <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
                                     <Zap className="w-6 h-6 text-white" />
                                 </div>
-                                <h3 className="text-2xl font-bold">Start New Extraction</h3>
+                                <h3 className="text-xl md:text-2xl font-bold">Start New Extraction</h3>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-6 mb-8">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                                 {/* URL Input */}
                                 <div>
                                     <label className="block text-sm font-medium mb-3 text-blue-300">
@@ -324,13 +324,13 @@ function App() {
                                             }`}
                                     >
                                         <div className="flex items-center gap-3 px-4 py-4">
-                                            <Globe className="w-5 h-5 text-blue-400" />
+                                            <Globe className="w-5 h-5 text-blue-400 flex-shrink-0" />
                                             <input
                                                 type="text"
                                                 value={baseUrl}
                                                 onChange={(e) => setBaseUrl(e.target.value)}
                                                 placeholder="https://docs.example.com"
-                                                className="flex-1 bg-transparent outline-none border-0 text-white placeholder-blue-400/50"
+                                                className="flex-1 bg-transparent outline-none border-0 text-white placeholder-blue-400/50 w-full min-w-0"
                                                 onFocus={() => setUrlFocused(true)}
                                                 onBlur={() => setUrlFocused(false)}
                                             />
@@ -348,14 +348,14 @@ function App() {
                                             }`}
                                     >
                                         <div className="flex items-center gap-3 px-4 py-4">
-                                            <BookOpen className="w-5 h-5 text-cyan-400" />
+                                            <BookOpen className="w-5 h-5 text-cyan-400 flex-shrink-0" />
                                             <input
                                                 type="text"
                                                 value={topic}
                                                 onChange={(e) => setTopic(e.target.value)}
                                                 onKeyPress={(e) => e.key === 'Enter' && scrapeUrl()}
                                                 placeholder="getting-started"
-                                                className="flex-1 bg-transparent outline-none border-0 text-white placeholder-cyan-400/50"
+                                                className="flex-1 bg-transparent outline-none border-0 text-white placeholder-cyan-400/50 w-full min-w-0"
                                                 onFocus={() => setTopicFocused(true)}
                                                 onBlur={() => setTopicFocused(false)}
                                             />
@@ -371,7 +371,7 @@ function App() {
                                 className="w-full py-4 rounded-xl bg-gradient-to-r from-blue-600 via-cyan-600 to-emerald-600 bg-size-200 hover:bg-pos-100 transition-all duration-500 font-semibold text-lg shadow-lg hover:shadow-2xl hover:shadow-blue-500/50 hover:scale-105 transform flex items-center justify-center gap-3 group disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                             >
                                 <Zap className={`w-5 h-5 ${isLoading ? 'animate-spin' : 'group-hover:animate-pulse'}`} />
-                                {isLoading ? 'Extracting Documentation...' : 'Start Extraction'}
+                                {isLoading ? 'Extracting...' : 'Start Extraction'}
                                 <Sparkles className="w-5 h-5 group-hover:rotate-180 transition-transform duration-500" />
                             </button>
                         </div>
@@ -385,8 +385,8 @@ function App() {
                                     {statusType === 'normal' && <Target className="w-5 h-5 text-blue-400" />}
                                 </div>
                                 <h3 className="text-xl font-semibold">
-                                    {statusType === 'error' ? 'Extraction Error' :
-                                        statusType === 'success' ? 'Extraction Complete' :
+                                    {statusType === 'error' ? 'Error' :
+                                        statusType === 'success' ? 'Complete' :
                                             'Status'}
                                 </h3>
                             </div>
@@ -395,11 +395,11 @@ function App() {
                                 statusType === 'success' ? 'bg-emerald-900/20 border-emerald-500/50' :
                                     'bg-slate-900/50 border-blue-500/50'
                                 }`}>
-                                <div className={`w-2 h-2 rounded-full animate-pulse ${statusType === 'error' ? 'bg-red-400' :
+                                <div className={`w-2 h-2 rounded-full animate-pulse flex-shrink-0 ${statusType === 'error' ? 'bg-red-400' :
                                     statusType === 'success' ? 'bg-emerald-400' :
                                         'bg-blue-400/50'
                                     }`} />
-                                <p className={`${statusType === 'error' ? 'text-red-300' :
+                                <p className={`break-words ${statusType === 'error' ? 'text-red-300' :
                                     statusType === 'success' ? 'text-emerald-300' :
                                         'text-blue-300/70'
                                     }`}>{status}</p>
@@ -417,7 +417,7 @@ function App() {
                                     <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center mr-3">
                                         <Database className="w-6 h-6 text-white" />
                                     </div>
-                                    <h2 className="text-xl font-semibold">Documentation Library</h2>
+                                    <h2 className="text-xl font-semibold">Library</h2>
                                 </div>
                                 <button
                                     onClick={listScrapedFiles}
@@ -459,7 +459,7 @@ function App() {
                                     <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center mr-3">
                                         <Brain className="w-6 h-6 text-white" />
                                     </div>
-                                    <h2 className="text-xl font-semibold">Content Viewer</h2>
+                                    <h2 className="text-xl font-semibold">Viewer</h2>
                                 </div>
                                 {selectedFile && (
                                     <button
@@ -519,19 +519,19 @@ function App() {
 
                 {/* Settings Tab */}
                 {activeTab === 'settings' && (
-                    <div className="glass border border-blue-500/20 rounded-2xl p-8">
+                    <div className="glass border border-blue-500/20 rounded-2xl p-6 md:p-8">
                         <h2 className="text-2xl font-semibold mb-8">Settings</h2>
 
                         <div className="space-y-8">
                             <div>
                                 <h3 className="text-lg font-medium mb-4 text-blue-200">API Configuration</h3>
                                 <div className="glass border border-blue-400/20 rounded-xl p-4">
-                                    <div className="flex items-center justify-between">
+                                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 md:gap-0">
                                         <div>
                                             <p className="font-medium text-white">Backend URL</p>
-                                            <p className="text-sm text-blue-300">{API_BASE_URL}</p>
+                                            <p className="text-sm text-blue-300 break-all">{API_BASE_URL}</p>
                                         </div>
-                                        <div className={`px-3 py-1 rounded-full text-xs font-medium ${apiStatus === 'online' ? 'bg-emerald-500/20 text-emerald-400' :
+                                        <div className={`self-start md:self-auto px-3 py-1 rounded-full text-xs font-medium ${apiStatus === 'online' ? 'bg-emerald-500/20 text-emerald-400' :
                                             apiStatus === 'offline' ? 'bg-red-500/20 text-red-400' :
                                                 'bg-yellow-500/20 text-yellow-400'
                                             }`}>
