@@ -491,8 +491,8 @@ export const ContentViewer: React.FC<ContentViewerProps> = ({
                             size="sm"
                             onClick={() => copyToClipboard(content)}
                             className={`transition-colors ${copied
-                                    ? 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20'
-                                    : 'hover:bg-gray-100 dark:hover:bg-gray-800'
+                                ? 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20'
+                                : 'hover:bg-gray-100 dark:hover:bg-gray-800'
                                 }`}
                         >
                             {copied ? '✓ Copied!' : '📋 Copy'}
@@ -501,7 +501,7 @@ export const ContentViewer: React.FC<ContentViewerProps> = ({
                 </div>
             )}
             <div
-                className="overflow-y-auto p-4 md:p-6 rounded-lg border bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 custom-scrollbar"
+                className="overflow-y-auto p-4 md:p-6 rounded-2xl border bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 custom-scrollbar"
                 style={{ maxHeight }}
             >
                 {isMarkdown ? (
@@ -587,7 +587,7 @@ export const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
                 </div>
             </div>
 
-            <div className="overflow-y-auto max-h-[85vh] min-h-[400px] md:min-h-[600px] p-4 md:p-6 rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 custom-scrollbar">
+            <div className="overflow-y-auto max-h-[85vh] min-h-[400px] md:min-h-[600px] p-4 md:p-6 rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 custom-scrollbar">
                 <div className="prose prose-sm max-w-none dark:prose-invert">
                     <ReactMarkdown
                         components={{
@@ -609,13 +609,13 @@ export const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
                             code: ({ className, children, ...props }) => {
                                 const match = /language-(\w+)/.exec(className || '');
                                 return match ? (
-                                    <pre className="mb-4 p-4 bg-gray-100 dark:bg-gray-800 rounded border overflow-x-auto">
+                                    <pre className="mb-4 p-4 bg-gray-100 dark:bg-gray-800 rounded-xl border overflow-x-auto">
                                         <code className={`${className} text-sm font-mono text-pink-600 dark:text-pink-400`} {...props}>
                                             {children}
                                         </code>
                                     </pre>
                                 ) : (
-                                    <code className="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded text-sm font-mono text-pink-600 dark:text-pink-400 border" {...props}>
+                                    <code className="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded-lg text-sm font-mono text-pink-600 dark:text-pink-400 border" {...props}>
                                         {children}
                                     </code>
                                 );
@@ -731,8 +731,8 @@ export const FileContentItem: React.FC<FileContentItemProps> = ({
                         size="sm"
                         onClick={() => copyToClipboard(url, 'url')}
                         className={`text-xs px-3 py-1 ${copied.url
-                                ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400'
-                                : 'hover:bg-gray-100 dark:hover:bg-gray-800'
+                            ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400'
+                            : 'hover:bg-gray-100 dark:hover:bg-gray-800'
                             }`}
                     >
                         {copied.url ? '✅ URL Copied!' : '📋 Copy URL'}
@@ -742,8 +742,8 @@ export const FileContentItem: React.FC<FileContentItemProps> = ({
                         size="sm"
                         onClick={() => copyToClipboard(content, 'content')}
                         className={`text-xs px-3 py-1 ${copied.content
-                                ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400'
-                                : 'hover:bg-gray-100 dark:hover:bg-gray-800'
+                            ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400'
+                            : 'hover:bg-gray-100 dark:hover:bg-gray-800'
                             }`}
                     >
                         {copied.content ? '✅ Content Copied!' : '📝 Copy Content'}

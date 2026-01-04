@@ -320,7 +320,7 @@ function App() {
                                         Documentation Website
                                     </label>
                                     <div
-                                        className={`glass border border-blue-500/50 rounded-xl transition-all duration-300 ${urlFocused ? 'ring-2 ring-blue-500 shadow-lg shadow-blue-500/30' : ''
+                                        className={`glass border border-blue-500/50 rounded-2xl transition-all duration-300 ${urlFocused ? 'ring-2 ring-blue-500 shadow-lg shadow-blue-500/30' : ''
                                             }`}
                                     >
                                         <div className="flex items-center gap-3 px-4 py-4">
@@ -330,7 +330,7 @@ function App() {
                                                 value={baseUrl}
                                                 onChange={(e) => setBaseUrl(e.target.value)}
                                                 placeholder="https://docs.example.com"
-                                                className="flex-1 bg-transparent outline-none border-0 text-white placeholder-blue-400/50 w-full min-w-0"
+                                                className="flex-1 bg-transparent outline-none border-0 focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 text-white placeholder-blue-400/50 w-full min-w-0"
                                                 onFocus={() => setUrlFocused(true)}
                                                 onBlur={() => setUrlFocused(false)}
                                             />
@@ -344,7 +344,7 @@ function App() {
                                         Topic/Section
                                     </label>
                                     <div
-                                        className={`glass border border-cyan-500/50 rounded-xl transition-all duration-300 ${topicFocused ? 'ring-2 ring-cyan-500 shadow-lg shadow-cyan-500/30' : ''
+                                        className={`glass border border-cyan-500/50 rounded-2xl transition-all duration-300 ${topicFocused ? 'ring-2 ring-cyan-500 shadow-lg shadow-cyan-500/30' : ''
                                             }`}
                                     >
                                         <div className="flex items-center gap-3 px-4 py-4">
@@ -355,7 +355,7 @@ function App() {
                                                 onChange={(e) => setTopic(e.target.value)}
                                                 onKeyPress={(e) => e.key === 'Enter' && scrapeUrl()}
                                                 placeholder="getting-started"
-                                                className="flex-1 bg-transparent outline-none border-0 text-white placeholder-cyan-400/50 w-full min-w-0"
+                                                className="flex-1 bg-transparent outline-none border-0 focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 text-white placeholder-cyan-400/50 w-full min-w-0"
                                                 onFocus={() => setTopicFocused(true)}
                                                 onBlur={() => setTopicFocused(false)}
                                             />
