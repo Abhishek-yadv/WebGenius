@@ -781,13 +781,30 @@ async def scrape_section(base_url, section):
         return None
 
     links: List[str] = []
-    async with httpx.AsyncClient(
-        http2=True,
-        follow_redirects=True,
-        timeout=timeout,
-        limits=limits,
-        headers=headers,
-    ) as client:
+    try:
+        client_cm = httpx.AsyncClient(
+            http2=True,
+            follow_redirects=True,
+            timeout=timeout,
+            limits=limits,
+            headers=headers,
+        )
+    except (RuntimeError, ImportError) as e:
+        # httpx raises at client construction time when http2=True but 'h2' isn't installed.
+        msg = str(e)
+        if "http2" in msg.lower() and "h2" in msg.lower():
+            logger.warning("HTTP/2 requested but 'h2' is not installed; falling back to HTTP/1.1")
+            client_cm = httpx.AsyncClient(
+                http2=False,
+                follow_redirects=True,
+                timeout=timeout,
+                limits=limits,
+                headers=headers,
+            )
+        else:
+            raise
+
+    async with client_cm as client:
         section_html = await fetch_html(client, section_url)
         if section_html:
             links = extract_links_from_section_html(section_url, section, section_html)
